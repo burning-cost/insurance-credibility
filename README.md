@@ -27,8 +27,8 @@ from insurance_credibility import BuhlmannStraub
 bs = BuhlmannStraub()
 bs.fit(df, group_col="scheme", period_col="year",
        loss_col="loss_rate", weight_col="exposure")
-print(bs.credibility_factors_)
-print(bs.kappa_)
+print(bs.z_)   # Polars DataFrame with columns ["group", "Z"]
+print(bs.k_)   # float — Bühlmann's k (noise-to-signal ratio)
 
 # Individual policy experience rating
 from insurance_credibility import ClaimsHistory, StaticCredibilityModel

@@ -106,6 +106,11 @@ Benchmarked against **flat NCD table** (standard UK 5-step NCD: 0 claims → no 
 - **The key advantage:** correct exposure weighting. The fitted kappa determines how much exposure is needed before own experience dominates the a priori. For typical commercial motor (kappa ~ 3-8), 3 full vehicle-years gives 30-50% credibility — substantially less than flat NCD implies.
 - **Limitation:** `StaticCredibilityModel` assumes homoscedastic within-policy variance. For portfolios with systematic heteroscedasticity (young drivers vs experienced, HGV vs private car), fit separately by segment. Kappa estimation needs at least 50-100 policies with 2+ years of history.
 
+
+## Databricks Notebook
+
+A ready-to-run Databricks notebook benchmarking this library against standard approaches is available in [burning-cost-examples](https://github.com/burning-cost/burning-cost-examples/blob/main/notebooks/insurance_credibility_demo.py).
+
 ## References
 
 - Bühlmann, H. & Gisler, A. (2005). *A Course in Credibility Theory and Its Applications*. Springer.

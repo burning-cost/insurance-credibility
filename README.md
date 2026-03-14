@@ -21,22 +21,34 @@ pip install insurance-credibility
 ## Quick start
 
 ```python
-# Group-level credibility (scheme pricing)
+import polars as pl
 from insurance_credibility import BuhlmannStraub
+
+# Group-level credibility (scheme pricing)
+# One row per scheme per year — loss_rate is incurred per vehicle-year
+df = pl.DataFrame({
+    "scheme":    ["A", "A", "A", "B", "B", "B", "C", "C", "C"],
+    "year":      [2022, 2023, 2024, 2022, 2023, 2024, 2022, 2023, 2024],
+    "loss_rate": [0.12, 0.09, 0.11, 0.25, 0.28, 0.22, 0.08, 0.07, 0.09],
+    "exposure":  [120.0, 135.0, 140.0, 45.0, 50.0, 48.0, 300.0, 310.0, 320.0],
+})
 
 bs = BuhlmannStraub()
 bs.fit(df, group_col="scheme", period_col="year",
        loss_col="loss_rate", weight_col="exposure")
-print(bs.credibility_factors_)
-print(bs.kappa_)
+
+print(bs.z_)          # credibility factors per scheme (Z_i)
+print(bs.k_)          # Bühlmann's k: noise-to-signal ratio
+print(bs.premiums_)   # credibility-blended premium per scheme
+
 
 # Individual policy experience rating
 from insurance_credibility import ClaimsHistory, StaticCredibilityModel
 
 histories = [
-    ClaimsHistory("POL001", periods=[1,2,3], claim_counts=[0,1,0],
+    ClaimsHistory("POL001", periods=[1, 2, 3], claim_counts=[0, 1, 0],
                   exposures=[1.0, 1.0, 0.8], prior_premium=400.0),
-    ClaimsHistory("POL002", periods=[1,2,3], claim_counts=[2,1,2],
+    ClaimsHistory("POL002", periods=[1, 2, 3], claim_counts=[2, 1, 2],
                   exposures=[1.0, 1.0, 1.0], prior_premium=400.0),
 ]
 
@@ -52,6 +64,11 @@ posterior_premium = histories[0].prior_premium * cf
 ### Classical credibility
 
 `BuhlmannStraub` — group credibility for scheme pricing. Estimates structural parameters (within-group variance, between-group variance) from the portfolio using method of moments. Produces credibility factors and credibility-weighted predictions per group.
+
+Key attributes after fitting:
+- `bs.z_` — Polars DataFrame with columns `["group", "Z"]`; Z_i = w_i / (w_i + k)
+- `bs.k_` — Bühlmann's k = v/a (noise-to-signal ratio)
+- `bs.premiums_` — Polars DataFrame with credibility premiums per group
 
 `HierarchicalBuhlmannStraub` — nested group structure (e.g., scheme → book, sector → district → area). Extends Bühlmann-Straub to multi-level hierarchies following Jewell (1975).
 

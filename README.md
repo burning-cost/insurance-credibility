@@ -113,6 +113,15 @@ Benchmarked against **flat NCD table** (standard UK 5-step NCD: 0 claims → no 
 - Calcetero, V., Badescu, A. & Lin, X.S. (2024). "Credibility theory for the 21st century." *ASTIN Bulletin*.
 - Wüthrich, M.V. (2024). "Transformer models for individual experience rating." *European Actuarial Journal*.
 
+
+## Related Libraries
+
+| Library | What it does |
+|---------|-------------|
+| [bayesian-pricing](https://github.com/burning-cost/bayesian-pricing) | Hierarchical Bayesian models — generalises Bühlmann-Straub to Poisson/Gamma likelihoods and multiple crossed random effects |
+| [insurance-multilevel](https://github.com/burning-cost/insurance-multilevel) | Two-stage CatBoost + REML random effects for broker and scheme factors in high-cardinality portfolios |
+| [experience-rating](https://github.com/burning-cost/experience-rating) | NCD systems and experience modification factors — uses credibility weighting for individual policy experience rating |
+
 ## Licence
 
 MIT

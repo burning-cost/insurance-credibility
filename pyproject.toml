@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "insurance-credibility"
-version = "0.1.1"
+version = "0.1.2"
 description = "Credibility models for UK non-life insurance pricing: classical Bühlmann-Straub and individual-policy Bayesian experience rating"
 readme = "README.md"
 license = { text = "MIT" }
@@ -59,6 +59,8 @@ dev = [
 [project.urls]
 Repository = "https://github.com/burning-cost/insurance-credibility"
 Issues = "https://github.com/burning-cost/insurance-credibility/issues"
+Homepage = "https://github.com/burning-cost/insurance-credibility"
+Documentation = "https://github.com/burning-cost/insurance-credibility#readme"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/insurance_credibility"]

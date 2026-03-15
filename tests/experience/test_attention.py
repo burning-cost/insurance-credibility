@@ -226,3 +226,99 @@ class TestDeepAttentionRepr:
         r = repr(model)
         assert "hidden_dim" in r
         assert "n_epochs" in r
+
+
+@skip_if_no_torch
+class TestLeaveLastOutRegression:
+    """Regression tests for P1 bug: _histories_to_tensors must exclude last period from mask.
+
+    The bug: mask[i, s] = True for all s in range(n), so period T (the prediction
+    target) was included as an attention input. The model could learn to attend
+    directly to the target period, creating data leakage.
+
+    The fix: only set mask[i, s] = True for s in range(n - 1). Period T is the
+    target (last_counts), not an input.
+    """
+
+    def test_last_period_excluded_from_mask(self):
+        """The mask must be False for the last period of each history."""
+        import torch
+        rng = np.random.default_rng(500)
+        histories = make_portfolio(5, rng, n_periods=4)
+        model = DeepAttentionModel(max_periods=4, n_epochs=1, random_state=42)
+        model._device_obj = torch.device("cpu")
+        tensors = model._histories_to_tensors(histories, torch)
+        mask = tensors["mask"]  # shape (B, T)
+        # For a 4-period history with max_periods=4, positions 0,1,2 should be True,
+        # position 3 (the last period) must be False.
+        for i in range(len(histories)):
+            assert not mask[i, 3].item(), (
+                f"Policy {i}: mask[i, 3] is True, last period should be excluded. "
+                f"This is the P1 regression: leave-last-out not implemented."
+            )
+
+    def test_first_n_minus_one_periods_in_mask(self):
+        """Periods 0..(n-2) must be True in the mask; period n-1 must be False."""
+        import torch
+        rng = np.random.default_rng(501)
+        histories = make_portfolio(3, rng, n_periods=5)
+        model = DeepAttentionModel(max_periods=6, n_epochs=1, random_state=42)
+        model._device_obj = torch.device("cpu")
+        tensors = model._histories_to_tensors(histories, torch)
+        mask = tensors["mask"]  # shape (3, 6)
+        for i in range(3):
+            # Periods 0-3 should be in mask (n_train = min(5,6) - 1 = 4)
+            for s in range(4):
+                assert mask[i, s].item(), f"Policy {i}, period {s}: should be in mask"
+            # Period 4 is the target — must not be in mask
+            assert not mask[i, 4].item(), (
+                f"Policy {i}: period 4 (last) is in the attention mask — data leakage."
+            )
+            # Period 5 is padding — also not in mask
+            assert not mask[i, 5].item()
+
+    def test_last_counts_equal_final_period_counts(self):
+        """last_counts tensor must contain the final observed claim count."""
+        import torch
+        rng = np.random.default_rng(502)
+        histories = make_portfolio(5, rng, n_periods=4)
+        model = DeepAttentionModel(max_periods=4, n_epochs=1, random_state=42)
+        model._device_obj = torch.device("cpu")
+        tensors = model._histories_to_tensors(histories, torch)
+        last_counts = tensors["last_counts"]
+        for i, h in enumerate(histories):
+            expected = float(h.claim_counts[-1])
+            actual = float(last_counts[i].item())
+            assert actual == pytest.approx(expected, abs=1e-6), (
+                f"Policy {i}: last_counts={actual}, expected final count={expected}"
+            )
+
+    def test_mask_count_equals_n_minus_one(self):
+        """For a history of n periods, exactly n-1 periods should be masked True."""
+        import torch
+        rng = np.random.default_rng(503)
+        for n_periods in [2, 3, 5]:
+            histories = make_portfolio(4, rng, n_periods=n_periods)
+            model = DeepAttentionModel(max_periods=n_periods, n_epochs=1, random_state=42)
+            model._device_obj = torch.device("cpu")
+            tensors = model._histories_to_tensors(histories, torch)
+            mask = tensors["mask"]
+            for i in range(4):
+                n_true = int(mask[i].sum().item())
+                assert n_true == n_periods - 1, (
+                    f"n_periods={n_periods}: expected {n_periods-1} True in mask, "
+                    f"got {n_true}. P1 regression: last period not excluded."
+                )
+
+    def test_single_period_history_mask_all_false(self):
+        """Single-period history: mask is all-False (nothing to attend to)."""
+        import torch
+        h = ClaimsHistory("S1", [1], [2], prior_premium=1.0)
+        model = DeepAttentionModel(max_periods=4, n_epochs=1, random_state=42)
+        model._device_obj = torch.device("cpu")
+        tensors = model._histories_to_tensors([h], torch)
+        mask = tensors["mask"]
+        assert not mask[0].any().item(), (
+            "Single-period history should have all-False mask (no input periods). "
+            "If mask has True entries: data leakage regression."
+        )

@@ -47,7 +47,7 @@ def simulate_poisson_gamma(
             # State update
             alpha_post = alpha + y_t
             beta_post = beta + mu
-            beta_next = q * (beta_post + mu)
+            beta_next = q * beta_post
             alpha_next = p * q * alpha_post + (1.0 - p) * beta_next
 
             alpha = max(alpha_next, 1e-10)
@@ -194,11 +194,15 @@ class TestDynamicForwardRecursion:
             assert beta > 0, f"Negative beta: {beta}"
 
     def test_high_q_decays_slowly(self):
-        """With q near 1, older claims retain high weight.
-        The posterior should be further from the prior than with low q."""
-        rng = np.random.default_rng(111)
-        histories = simulate_poisson_gamma(50, 5, p=0.8, q=0.9, rng=rng)
+        """Verify that varying q produces different credibility factors.
 
+        In the corrected AJLW model the relationship between q and CF is not
+        monotone in the simple direction assumed before the P0 bug fix. With
+        low q the rate parameter beta shrinks fast, which can inflate alpha/beta
+        for extreme histories. The meaningful guarantee is that different q
+        values produce different predictions — the model responds to the
+        parameter — and that all predictions are finite and positive.
+        """
         model_high_q = DynamicPoissonGammaModel(p0=0.5, q0=0.5)
         model_high_q.p_ = 0.8
         model_high_q.q_ = 0.95
@@ -209,12 +213,20 @@ class TestDynamicForwardRecursion:
         model_low_q.q_ = 0.3
         model_low_q.is_fitted_ = True
 
-        # Policy with consistent high claims: high-q should give higher CF
         h = make_history("HIGH", [4, 4, 4, 4, 4], prior=1.0)
         cf_high = model_high_q.predict(h)
         cf_low = model_low_q.predict(h)
-        # With more persistent states (high q), extreme histories have more effect
-        assert cf_high > cf_low or abs(cf_high - cf_low) < 0.5  # directional only
+
+        # Both should be positive, finite, and above the prior (prior = 1)
+        assert cf_high > 1.0, f"CF with high q should exceed prior, got {cf_high}"
+        assert cf_low > 1.0, f"CF with low q should exceed prior, got {cf_low}"
+        assert np.isfinite(cf_high)
+        assert np.isfinite(cf_low)
+        # The two models must produce distinct predictions
+        assert abs(cf_high - cf_low) > 0.01, (
+            f"High-q and low-q models give same CF ({cf_high:.4f}): "
+            "model is not sensitive to q parameter."
+        )
 
 
 class TestDynamicBatch:
@@ -265,3 +277,116 @@ class TestDynamicEdgeCases:
         r = repr(model)
         assert "p=" in r
         assert "q=" in r
+
+
+class TestAJLWBetaTransitionRegression:
+    """Regression tests for P0 bug: beta state transition must not double-add exposure.
+
+    The correct AJLW (2023) formula is:
+        beta_{t+1} = q * beta_{t|t}   where   beta_{t|t} = beta_{t|t-1} + mu*e_t
+
+    The bug was:
+        beta_next = q * (beta_post + mu * e_t)  # mu*e_t added twice
+
+    These tests pin the exact numerical output of the forward recursion so any
+    future regression is caught immediately.
+    """
+
+    def test_forward_recursion_single_period_exact(self):
+        """Pin exact alpha/beta values after 1 period against hand calculation.
+
+        Setup: alpha0=1, beta0=1, mu=1, e_t=1, y_t=2, p=0.8, q=0.9
+
+        Correct update:
+            alpha_post = 1 + 2 = 3
+            beta_post  = 1 + 1*1 = 2
+            beta_next  = 0.9 * 2 = 1.8
+            alpha_next = 0.8*0.9*3 + (1-0.8)*1.8 = 2.16 + 0.36 = 2.52
+        """
+        h = ClaimsHistory(
+            policy_id="TEST",
+            periods=[1],
+            claim_counts=[2],
+            prior_premium=1.0,
+        )
+        model = DynamicPoissonGammaModel(alpha0=1.0, beta0_multiplier=1.0)
+        model.p_ = 0.8
+        model.q_ = 0.9
+        model.is_fitted_ = True
+
+        alpha, beta = model.predict_posterior_params(h)
+
+        assert alpha == pytest.approx(2.52, rel=1e-6), (
+            f"alpha={alpha:.6f}, expected 2.52. "
+            f"If 2.88 or similar: beta_next is double-adding exposure (P0 bug)."
+        )
+        assert beta == pytest.approx(1.8, rel=1e-6), (
+            f"beta={beta:.6f}, expected 1.8. "
+            f"If 2.7 or similar: beta_next is double-adding exposure (P0 bug)."
+        )
+
+    def test_forward_recursion_two_periods_exact(self):
+        """Pin exact alpha/beta values after 2 periods.
+
+        Setup: alpha0=1, beta0=1, mu=1, e_t=1 each, y=[0,3], p=0.5, q=0.7
+
+        Period 1 (y=0):
+            alpha_post1 = 1 + 0 = 1
+            beta_post1  = 1 + 1 = 2
+            beta_next1  = 0.7 * 2 = 1.4
+            alpha_next1 = 0.5*0.7*1 + 0.5*1.4 = 0.35 + 0.70 = 1.05
+
+        Period 2 (y=3):
+            alpha_post2 = 1.05 + 3 = 4.05
+            beta_post2  = 1.4 + 1 = 2.4
+            beta_next2  = 0.7 * 2.4 = 1.68
+            alpha_next2 = 0.5*0.7*4.05 + 0.5*1.68 = 1.4175 + 0.84 = 2.2575
+        """
+        h = ClaimsHistory(
+            policy_id="TEST2",
+            periods=[1, 2],
+            claim_counts=[0, 3],
+            prior_premium=1.0,
+        )
+        model = DynamicPoissonGammaModel(alpha0=1.0, beta0_multiplier=1.0)
+        model.p_ = 0.5
+        model.q_ = 0.7
+        model.is_fitted_ = True
+
+        alpha, beta = model.predict_posterior_params(h)
+
+        assert alpha == pytest.approx(2.2575, rel=1e-6), (
+            f"alpha={alpha:.6f}, expected 2.2575"
+        )
+        assert beta == pytest.approx(1.68, rel=1e-6), (
+            f"beta={beta:.6f}, expected 1.68"
+        )
+
+    def test_beta_next_does_not_contain_double_exposure(self):
+        """Verify beta_post does not equal q*(beta_post + mu*e_t).
+
+        With the bug, beta_next = q*(beta + mu*e_t + mu*e_t) = q*(beta + 2*mu*e_t).
+        With the fix,  beta_next = q*(beta + mu*e_t).
+        At unit exposure (mu=1, e=1), beta0=1:
+            buggy : beta_next = 0.9 * (1 + 1 + 1) = 2.7  (after y=0)
+            correct: beta_next = 0.9 * (1 + 1) = 1.8     (after y=0)
+        """
+        h = ClaimsHistory(
+            policy_id="BETACHECK",
+            periods=[1],
+            claim_counts=[0],
+            prior_premium=1.0,
+        )
+        model = DynamicPoissonGammaModel(alpha0=1.0, beta0_multiplier=1.0)
+        model.p_ = 0.5
+        model.q_ = 0.9
+        model.is_fitted_ = True
+
+        _, beta = model.predict_posterior_params(h)
+
+        # Correct: q * (1 + 1) = 0.9 * 2 = 1.8
+        # Buggy:   q * (1 + 1 + 1) = 0.9 * 3 = 2.7
+        assert beta == pytest.approx(1.8, rel=1e-6), (
+            f"beta={beta:.6f}. Expected 1.8 (correct). "
+            f"If 2.7: beta_next double-adds exposure (P0 regression)."
+        )

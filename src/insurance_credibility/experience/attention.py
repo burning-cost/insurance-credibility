@@ -446,7 +446,17 @@ class DeepAttentionModel:
     def _histories_to_tensors(
         self, histories: list[ClaimsHistory], torch: "torch"
     ) -> dict:
-        """Convert a list of ClaimsHistory to padded tensors."""
+        """Convert a list of ClaimsHistory to padded tensors.
+
+        Leave-last-out encoding: the attention input mask covers only periods
+        [0, n-2] (i.e., all periods except the last). The last period's claim
+        count is the prediction target. This ensures that the model cannot
+        attend to the target period during training, preventing data leakage.
+
+        Policies with a single period will have an all-False mask, so the
+        model will output the prior premium and the loss measures how close
+        the prior is to the single observed count.
+        """
         T = self.max_periods
         B = len(histories)
 
@@ -460,7 +470,10 @@ class DeepAttentionModel:
         for i, h in enumerate(histories):
             assert h.exposures is not None
             n = min(h.n_periods, T)
-            for s in range(n):
+            # Exclude the last period from the attention input (leave-last-out).
+            # Period n-1 is the prediction target, not an input feature.
+            n_train = n - 1
+            for s in range(n_train):
                 e_s = h.exposures[s]
                 claim_rates[i, s] = h.claim_counts[s] / max(e_s, 1e-8)
                 exposures[i, s] = e_s

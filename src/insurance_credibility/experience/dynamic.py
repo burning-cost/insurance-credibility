@@ -326,7 +326,7 @@ class DynamicPoissonGammaModel:
             beta_post = beta + mu * e_t
 
             # State transition to next period
-            beta_next = q * (beta_post + mu * e_t)
+            beta_next = q * beta_post
             alpha_next = p * q * alpha_post + (1.0 - p) * beta_next
 
             # Guard against numerical underflow
@@ -365,7 +365,7 @@ class DynamicPoissonGammaModel:
             # Update state
             alpha_post = alpha + float(y_t)
             beta_post = beta + mu * e_t
-            beta_next = q * (beta_post + mu * e_t)
+            beta_next = q * beta_post
             alpha_next = p * q * alpha_post + (1.0 - p) * beta_next
 
             alpha = max(alpha_next, 1e-10)

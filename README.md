@@ -103,33 +103,38 @@ history = ClaimsHistory(
 
 `exposures` is the key parameter that distinguishes this from flat NCD tables: a policy with 0.5 years of exposure gets far less credibility than one with 5 years, regardless of claim count.
 
-## Performance
+## Benchmark Results
 
-Benchmarked on a synthetic panel of 30 scheme segments over 5 years (150 observations) with known structural parameters planted in the DGP. Three approaches compared against the known true scheme rates.
+### Bühlmann-Straub: group credibility
 
-DGP: portfolio mean loss ratio 0.65, EPV v=0.020, VHM a=0.005, theoretical K=4.0. Portfolio split: 8 thin schemes (100-500 exposure), 12 medium (500-2000), 10 thick (2000-8000). Benchmark run post P0 fixes on Databricks serverless.
+Benchmarked on a synthetic panel: 30 scheme segments, 5 accident years, 64,302 total policy-years. Known structural parameters (mu=0.65, v=0.020, a=0.005, K=4.0). Three estimators compared against known true scheme rates. See `benchmarks/benchmark.py`.
+
+| Tier              | Schemes | Raw MAE | Portfolio avg MAE | Credibility MAE | Winner                  |
+|-------------------|---------|---------|-------------------|-----------------|-------------------------|
+| Thin (<500 exp)   | 8       | 0.0074  | 0.0596            | 0.0069          | Credibility             |
+| Medium (500–2000) | 12      | 0.0030  | 0.0423            | 0.0029          | Credibility             |
+| Thick (2000+ exp) | 10      | 0.0014  | 0.0337            | 0.0014          | Tie (Z ≈ 1.0)           |
+| All               | 30      | 0.0036  | 0.0440            | 0.0035          | Credibility             |
+
+Credibility beats raw experience on thin and medium tiers. It ties on thick tiers — at high exposure Z approaches 1.0 and credibility and raw converge, which is correct behaviour. Portfolio average is uniformly the worst: it ignores genuine between-scheme variation and costs you on large schemes where the evidence is unambiguous.
 
 **Structural parameter recovery:**
 - mu_hat=0.6593 (true=0.6500) — portfolio mean recovered to within 1.4%
 - v_hat=0.01770 (true=0.02000) — EPV underestimated by 11.5%
 - a_hat=0.00212 (true=0.00500) — VHM underestimated by 57.6%, K=8.36 (true K=4.0)
 
-K is over-estimated because the method-of-moments estimator needs substantial cross-scheme variation to converge. With only 30 groups and 5 years, the between-group variance estimate is noisy. On larger portfolios (100+ schemes over 7+ years), K converges to the true value. This conservative K means the model shrinks more aggressively than theory would dictate — safe for thin groups, slightly conservative for thick ones.
+K is over-estimated because the method-of-moments estimator needs substantial cross-scheme variation to converge. With only 30 groups and 5 years, the between-group variance estimate is noisy. On larger portfolios (100+ schemes over 7+ years), K converges to the true value. The conservative K means the model shrinks more aggressively than theory would dictate — safe for thin groups, slightly conservative for thick ones.
 
-**MAE vs true scheme rates:**
+Fit time: under 5 seconds on 150-row panel.
 
-| Tier | Schemes | Raw MAE | Portfolio MAE | Credibility MAE | Best |
-|------|---------|---------|---------------|-----------------|------|
-| Thin (<500 exp) | 8 | 0.0074 | 0.0596 | 0.0069 | Credibility |
-| Medium (500-2000) | 12 | 0.0030 | 0.0423 | 0.0029 | Credibility |
-| Thick (2000+ exp) | 10 | 0.0014 | 0.0337 | 0.0014 | Raw (margin negligible) |
-| Overall | 30 | 0.0036 | 0.0440 | 0.0035 | Credibility |
+### Experience rating
 
-- **Thin schemes**: Credibility MAE 0.0069 vs raw 0.0074 — 6.8% improvement. The model correctly pulls noisy thin-scheme estimates toward the portfolio mean.
-- **Thick schemes**: Raw and credibility are essentially tied (0.0014 each). At high exposure, Z approaches 1.0 and the credibility estimate equals the raw experience — correct behaviour.
-- **Portfolio average**: Uniformly worst across all tiers (MAE 0.0337-0.0596). Using the portfolio average to price individual schemes is expensive: you systematically over-price low-risk schemes and under-price high-risk ones.
-- **Credibility Z calibration**: Z = w/(w+K) with K=8.36. Thin schemes (exposure 100-500, total per scheme) get Z=0.1-0.4; thick schemes (2000-8000) get Z=0.7-1.0. The conservative K reduces the Z values relative to the theoretical optimum, but the direction of shrinkage is correct.
-- **Limitation**: Parameter estimation is noisy with 30 groups. Fit separately by line of business or market segment rather than pooling heterogeneous portfolios. Minimum practical dataset: 20+ groups with 3+ years each.
+Benchmarked against flat NCD table (standard UK 5-step NCD: 0 claims → no loading, 1 claim → +20%, 2+ claims → +45%) and simple frequency ratio on 500 synthetic fleet/commercial policies with 3 years of history and known latent true risk (Gamma-distributed). See `notebooks/benchmark_experience.py`.
+
+- **RMSE vs true risk:** Credibility shrinkage outperforms raw frequency ratio — a single bad year inflates the frequency ratio but receives only partial weight under Bühlmann-Straub.
+- **A/E calibration:** Max A/E deviation by predicted band is lower for credibility than for NCD, which is binned discretely and misses gradations within each claim-count band.
+- **Exposure weighting:** For typical commercial motor (kappa ~ 3–8), 3 full vehicle-years gives 30–50% credibility. Flat NCD assigns the same maximum discount regardless of policy size.
+- **Limitation:** `StaticCredibilityModel` assumes homoscedastic within-policy variance. Fit separately by segment for portfolios with systematic heteroscedasticity. Kappa estimation needs at least 50–100 policies with 2+ years of history.
 ## Databricks Notebook
 
 A ready-to-run Databricks notebook benchmarking this library against standard approaches is available in [burning-cost-examples](https://github.com/burning-cost/burning-cost-examples/blob/main/notebooks/insurance_credibility_demo.py).

@@ -104,15 +104,31 @@ history = ClaimsHistory(
 
 ## Performance
 
-Benchmarked against **flat NCD table** (standard UK 5-step NCD: 0 claims → no loading, 1 claim → +20%, 2+ claims → +45%) and **simple frequency ratio** (observed frequency / portfolio mean, no credibility shrinkage) on 500 synthetic fleet/commercial policies with 3 years of history and known latent true risk (Gamma-distributed). See `notebooks/benchmark_experience.py` for full methodology.
+Benchmarked on a synthetic panel of 30 scheme segments over 5 years (150 observations) with known structural parameters planted in the DGP. Three approaches compared against the known true scheme rates.
 
-- **Gini coefficient:** Credibility experience rating consistently produces higher Gini than flat NCD because it correctly weights exposure — 6 months of no-claims gets near-zero discount adjustment (close to a priori), while 3 full years gets substantial credit. Flat NCD treats both identically.
-- **RMSE vs true risk:** Credibility shrinkage towards the prior outperforms raw frequency ratio by reducing overfitting to noisy histories. A single bad year inflates the frequency ratio but receives only partial weight under Bühlmann-Straub.
-- **A/E calibration:** The max A/E deviation by predicted band is lower for credibility than for NCD, which is binned discretely and misses gradations within each claim-count band.
-- **The key advantage:** correct exposure weighting. The fitted kappa determines how much exposure is needed before own experience dominates the a priori. For typical commercial motor (kappa ~ 3-8), 3 full vehicle-years gives 30-50% credibility — substantially less than flat NCD implies.
-- **Limitation:** `StaticCredibilityModel` assumes homoscedastic within-policy variance. For portfolios with systematic heteroscedasticity (young drivers vs experienced, HGV vs private car), fit separately by segment. Kappa estimation needs at least 50-100 policies with 2+ years of history.
+DGP: portfolio mean loss ratio 0.65, EPV v=0.020, VHM a=0.005, theoretical K=4.0. Portfolio split: 8 thin schemes (100-500 exposure), 12 medium (500-2000), 10 thick (2000-8000). Benchmark run post P0 fixes on Databricks serverless.
 
+**Structural parameter recovery:**
+- mu_hat=0.6593 (true=0.6500) — portfolio mean recovered to within 1.4%
+- v_hat=0.01770 (true=0.02000) — EPV underestimated by 11.5%
+- a_hat=0.00212 (true=0.00500) — VHM underestimated by 57.6%, K=8.36 (true K=4.0)
 
+K is over-estimated because the method-of-moments estimator needs substantial cross-scheme variation to converge. With only 30 groups and 5 years, the between-group variance estimate is noisy. On larger portfolios (100+ schemes over 7+ years), K converges to the true value. This conservative K means the model shrinks more aggressively than theory would dictate — safe for thin groups, slightly conservative for thick ones.
+
+**MAE vs true scheme rates:**
+
+| Tier | Schemes | Raw MAE | Portfolio MAE | Credibility MAE | Best |
+|------|---------|---------|---------------|-----------------|------|
+| Thin (<500 exp) | 8 | 0.0074 | 0.0596 | 0.0069 | Credibility |
+| Medium (500-2000) | 12 | 0.0030 | 0.0423 | 0.0029 | Credibility |
+| Thick (2000+ exp) | 10 | 0.0014 | 0.0337 | 0.0014 | Raw (margin negligible) |
+| Overall | 30 | 0.0036 | 0.0440 | 0.0035 | Credibility |
+
+- **Thin schemes**: Credibility MAE 0.0069 vs raw 0.0074 — 6.8% improvement. The model correctly pulls noisy thin-scheme estimates toward the portfolio mean.
+- **Thick schemes**: Raw and credibility are essentially tied (0.0014 each). At high exposure, Z approaches 1.0 and the credibility estimate equals the raw experience — correct behaviour.
+- **Portfolio average**: Uniformly worst across all tiers (MAE 0.0337-0.0596). Using the portfolio average to price individual schemes is expensive: you systematically over-price low-risk schemes and under-price high-risk ones.
+- **Credibility Z calibration**: Z = w/(w+K) with K=8.36. Thin schemes (exposure 100-500, total per scheme) get Z=0.1-0.4; thick schemes (2000-8000) get Z=0.7-1.0. The conservative K reduces the Z values relative to the theoretical optimum, but the direction of shrinkage is correct.
+- **Limitation**: Parameter estimation is noisy with 30 groups. Fit separately by line of business or market segment rather than pooling heterogeneous portfolios. Minimum practical dataset: 20+ groups with 3+ years each.
 ## Databricks Notebook
 
 A ready-to-run Databricks notebook benchmarking this library against standard approaches is available in [burning-cost-examples](https://github.com/burning-cost/burning-cost-examples/blob/main/notebooks/insurance_credibility_demo.py).

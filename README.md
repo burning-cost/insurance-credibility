@@ -4,6 +4,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/insurance-credibility)](https://pypi.org/project/insurance-credibility/)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen)]()
 [![License](https://img.shields.io/badge/license-BSD--3-blue)]()
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/burning-cost/insurance-credibility/blob/main/notebooks/quickstart.ipynb)
 
 
 Credibility models for UK non-life insurance pricing: Bühlmann-Straub group credibility and Bayesian experience rating at individual policy level.

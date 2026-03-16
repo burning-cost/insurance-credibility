@@ -25,6 +25,7 @@ def simulate_poisson_gamma(
     """Simulate from the dynamic Poisson-gamma model.
 
     Generates data from the true model so we can verify parameter recovery.
+    Uses the corrected transition: beta_{t+1} = q * beta_{t|t}.
     """
     if rng is None:
         rng = np.random.default_rng(0)
@@ -44,9 +45,10 @@ def simulate_poisson_gamma(
             y_t = rng.poisson(mu * theta_t)
             counts.append(int(y_t))
 
-            # State update
+            # State update (Ahn et al. 2023, eq. 2.4)
             alpha_post = alpha + y_t
             beta_post = beta + mu
+            # beta_next = q * beta_{t|t}  — posterior rate, not double-counted
             beta_next = q * beta_post
             alpha_next = p * q * alpha_post + (1.0 - p) * beta_next
 
@@ -177,6 +179,93 @@ class TestDynamicPredict:
         alpha, beta = model.predict_posterior_params(h)
         expected_mean = alpha / beta
         assert expected_mean == pytest.approx(cf, rel=1e-5)
+
+
+class TestPoissonGammaAnalyticalPosterior:
+    """Regression test: single-period case against the exact analytical posterior.
+
+    For a single policy, single period, with p=1 (no state reversion) and
+    q=1 (no decay):
+
+        Prior:     Theta ~ Gamma(alpha_0, beta_0)
+        Likelihood: Y | Theta ~ Poisson(mu * e * Theta)
+        Posterior:  Theta | Y ~ Gamma(alpha_0 + Y, beta_0 + mu * e)
+
+    The recursion must reproduce this exactly, because for p=q=1 the
+    transition beta_{t+1} = q * beta_{t|t} with q=1 returns the posterior
+    unchanged.
+
+    This test guards against the exposure double-counting bug (P0-C1) where
+    the transition was erroneously `q * (beta_post + mu * e_t)`.
+    """
+
+    def test_single_period_matches_analytical_posterior(self):
+        """With p=q=1 and T=1, model must reproduce the Poisson-Gamma posterior."""
+        alpha_0 = 2.0
+        beta_0 = 3.0
+        mu = 0.8        # prior premium / a priori rate
+        e = 1.5         # exposure (policy-years)
+        y = 4           # observed claim count
+
+        # Analytical posterior: Gamma(alpha_0 + y, beta_0 + mu * e)
+        alpha_post_exact = alpha_0 + y
+        beta_post_exact = beta_0 + mu * e
+
+        # Build a model with p=q=1 and matching priors
+        model = DynamicPoissonGammaModel(
+            alpha0=alpha_0,
+            beta0_multiplier=beta_0 / alpha_0,  # so that beta_0 = alpha0 * multiplier
+        )
+        model.p_ = 1.0
+        model.q_ = 1.0
+        model.is_fitted_ = True
+
+        h = ClaimsHistory(
+            policy_id="TEST",
+            periods=[1],
+            claim_counts=[y],
+            prior_premium=mu,
+            exposures=[e],
+        )
+
+        alpha_model, beta_model = model.predict_posterior_params(h)
+
+        # For p=q=1, beta_next = 1.0 * beta_post = beta_0 + mu * e
+        # alpha_next = 1.0 * 1.0 * (alpha_0 + y) + (1-1) * beta_next = alpha_0 + y
+        assert alpha_model == pytest.approx(alpha_post_exact, rel=1e-10), (
+            f"alpha: model={alpha_model}, analytical={alpha_post_exact}"
+        )
+        assert beta_model == pytest.approx(beta_post_exact, rel=1e-10), (
+            f"beta: model={beta_model}, analytical={beta_post_exact}"
+        )
+
+    def test_posterior_mean_matches_analytical(self):
+        """Posterior mean alpha/beta must equal the analytical E[Theta|Y]."""
+        alpha_0 = 1.0
+        beta_0 = 1.0
+        mu = 1.0
+        e = 1.0
+        y = 3
+
+        model = DynamicPoissonGammaModel(alpha0=alpha_0, beta0_multiplier=1.0)
+        model.p_ = 1.0
+        model.q_ = 1.0
+        model.is_fitted_ = True
+
+        h = ClaimsHistory(
+            policy_id="T2",
+            periods=[1],
+            claim_counts=[y],
+            prior_premium=mu,
+            exposures=[e],
+        )
+
+        alpha_post, beta_post = model.predict_posterior_params(h)
+        posterior_mean = alpha_post / beta_post
+
+        # Analytical: E[Theta | Y=3] = (1 + 3) / (1 + 1*1) = 2.0
+        analytical_mean = (alpha_0 + y) / (beta_0 + mu * e)
+        assert posterior_mean == pytest.approx(analytical_mean, rel=1e-10)
 
 
 class TestDynamicForwardRecursion:

@@ -137,7 +137,7 @@ A ready-to-run Databricks notebook benchmarking this library against standard ap
 ## References
 
 - Bühlmann, H. & Gisler, A. (2005). *A Course in Credibility Theory and Its Applications*. Springer.
-- Ahn, J.Y., Jeong, H., Lu, Y. & Wüthrich, M.V. (2023). "Individual claims reserving using the Poisson-gamma state-space model." *Insurance: Mathematics and Economics*.
+- Ahn, J.Y., Jeong, H., Lu, Y. & Wüthrich, M.V. (2023). "Dynamic Bayesian Credibility." arXiv:2308.16058.
 - Calcetero, V., Badescu, A. & Lin, X.S. (2024). "Credibility theory for the 21st century." *ASTIN Bulletin*.
 - Wüthrich, M.V. (2024). "Transformer models for individual experience rating." *European Actuarial Journal*.
 

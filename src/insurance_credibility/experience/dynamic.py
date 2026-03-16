@@ -7,13 +7,16 @@ The key improvement over static credibility is that older claims are
 geometrically downweighted via the decay parameters (p, q). This is
 actuarially sensible: a fleet's accident record from 5 years ago is less
 predictive than last year's record, especially if risk characteristics
-(driver pool, vehicle fleet, safety measures) have changed.
+(driver pool, vehicle fleet, safety characteristics) have changed.
 
 Model specification:
     Y_t | Theta_t ~ Poisson(mu * e_t * Theta_t)
-    Theta_t | Theta_{t-1}, Y_{t-1} has Gamma distribution with:
-        alpha_{t+1} = p*q*(alpha_t + Y_t) + (1-p)*beta_{t+1}
-        beta_{t+1}  = q*(beta_t + mu*e_t)
+    Posterior update after observing Y_t:
+        alpha_{t|t} = alpha_t + Y_t
+        beta_{t|t}  = beta_t + mu * e_t
+    State transition to next period:
+        alpha_{t+1} = p * q * alpha_{t|t} + (1 - p) * beta_{t+1}
+        beta_{t+1}  = q * beta_{t|t}
     Initial state: Theta_1 ~ Gamma(alpha_0, beta_0) where alpha_0/beta_0 = 1
 
 The marginal distribution of Y_t is Negative Binomial, making the
@@ -325,7 +328,8 @@ class DynamicPoissonGammaModel:
             alpha_post = alpha + float(y_t)
             beta_post = beta + mu * e_t
 
-            # State transition to next period
+            # State transition to next period (Ahn et al. 2023, eq. 2.4)
+            # beta_next = q * beta_{t|t}  — posterior rate, not double-counted
             beta_next = q * beta_post
             alpha_next = p * q * alpha_post + (1.0 - p) * beta_next
 
@@ -362,9 +366,10 @@ class DynamicPoissonGammaModel:
             mu_t = (alpha / beta) * mu * e_t
             total_ll += _negbin_logpmf(int(y_t), r_t, mu_t)
 
-            # Update state
+            # Update state (Ahn et al. 2023, eq. 2.4)
             alpha_post = alpha + float(y_t)
             beta_post = beta + mu * e_t
+            # beta_next = q * beta_{t|t}  — posterior rate only, no double-count
             beta_next = q * beta_post
             alpha_next = p * q * alpha_post + (1.0 - p) * beta_next
 

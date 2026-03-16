@@ -18,7 +18,7 @@ claims under a reference Poisson intensity (the empirical portfolio frequency).
 For exponential family models, this is sufficient — for more complex likelihoods,
 users can supply a custom sufficient_stat_fn.
 
-Reference: Calcetero Vanegas, Badescu, Lin, Insurance: Mathematics and Economics 118 (2024).
+Reference: Calcetero Vanegas, Badescu, Lin, ASTIN Bulletin 54(1): 1–30 (2024).
 arXiv:2211.06568.
 """
 

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "insurance-credibility"
-version = "0.1.3"
+version = "0.1.4"
 description = "Credibility models for UK non-life insurance pricing: classical Bühlmann-Straub and individual-policy Bayesian experience rating"
 readme = "README.md"
 license = { text = "MIT" }

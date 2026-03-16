@@ -81,7 +81,7 @@ class BuhlmannStraub:
     Examples
     --------
     >>> import polars as pl
-    >>> from credibility import BuhlmannStraub
+    >>> from insurance_credibility import BuhlmannStraub
     >>>
     >>> df = pl.DataFrame({
     ...     "scheme": ["A", "A", "A", "B", "B", "B", "C", "C", "C"],

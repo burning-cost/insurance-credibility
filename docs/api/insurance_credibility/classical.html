@@ -254,7 +254,7 @@ model.premiums_at("sector")
 </span><span id="BuhlmannStraub-82"><a href="#BuhlmannStraub-82"><span class="linenos"> 82</span></a><span class="sd">    Examples</span>
 </span><span id="BuhlmannStraub-83"><a href="#BuhlmannStraub-83"><span class="linenos"> 83</span></a><span class="sd">    --------</span>
 </span><span id="BuhlmannStraub-84"><a href="#BuhlmannStraub-84"><span class="linenos"> 84</span></a><span class="sd">    &gt;&gt;&gt; import polars as pl</span>
-</span><span id="BuhlmannStraub-85"><a href="#BuhlmannStraub-85"><span class="linenos"> 85</span></a><span class="sd">    &gt;&gt;&gt; from credibility import BuhlmannStraub</span>
+</span><span id="BuhlmannStraub-85"><a href="#BuhlmannStraub-85"><span class="linenos"> 85</span></a><span class="sd">    &gt;&gt;&gt; from insurance_credibility import BuhlmannStraub</span>
 </span><span id="BuhlmannStraub-86"><a href="#BuhlmannStraub-86"><span class="linenos"> 86</span></a><span class="sd">    &gt;&gt;&gt;</span>
 </span><span id="BuhlmannStraub-87"><a href="#BuhlmannStraub-87"><span class="linenos"> 87</span></a><span class="sd">    &gt;&gt;&gt; df = pl.DataFrame({</span>
 </span><span id="BuhlmannStraub-88"><a href="#BuhlmannStraub-88"><span class="linenos"> 88</span></a><span class="sd">    ...     &quot;scheme&quot;: [&quot;A&quot;, &quot;A&quot;, &quot;A&quot;, &quot;B&quot;, &quot;B&quot;, &quot;B&quot;, &quot;C&quot;, &quot;C&quot;, &quot;C&quot;],</span>
@@ -685,7 +685,7 @@ entirely by the ratio K = v/a and the group's total exposure.</p>
 
 <div class="pdoc-code codehilite">
 <pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">credibility</span><span class="w"> </span><span class="kn">import</span> <span class="n">BuhlmannStraub</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">insurance_credibility</span><span class="w"> </span><span class="kn">import</span> <span class="n">BuhlmannStraub</span>
 <span class="gp">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
 <span class="gp">... </span>    <span class="s2">&quot;scheme&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">,</span> <span class="s2">&quot;C&quot;</span><span class="p">,</span> <span class="s2">&quot;C&quot;</span><span class="p">,</span> <span class="s2">&quot;C&quot;</span><span class="p">],</span>

@@ -9,6 +9,8 @@
 
 Credibility models for UK non-life insurance pricing: Bühlmann-Straub group credibility and Bayesian experience rating at individual policy level.
 
+**Blog post:** [Bühlmann-Straub Credibility in Python: Blending Thin Segments with Portfolio Experience](https://burning-cost.github.io/2026/02/19/buhlmann-straub-credibility-in-python/)
+
 ## The problem
 
 Two problems that look similar but need different tools:
@@ -24,6 +26,8 @@ This library addresses both.
 ```bash
 pip install insurance-credibility
 ```
+
+> 💬 Questions or feedback? Start a [Discussion](https://github.com/burning-cost/insurance-credibility/discussions). Found it useful? A ⭐ helps others find it.
 
 ## Quick start
 

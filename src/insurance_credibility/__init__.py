@@ -57,7 +57,7 @@ from .experience import (
     seniority_weights,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.1.4"
 
 __all__ = [
     # Classical

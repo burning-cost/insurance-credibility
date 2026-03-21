@@ -24,7 +24,7 @@ This library addresses both.
 ## Installation
 
 ```bash
-pip install insurance-credibility
+uv add insurance-credibility
 ```
 
 > 💬 Questions or feedback? Start a [Discussion](https://github.com/burning-cost/insurance-credibility/discussions). Found it useful? A ⭐ helps others find it.

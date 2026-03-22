@@ -76,11 +76,3 @@ addopts = "-v --tb=short"
 
 [tool.coverage.run]
 source = ["src/insurance_credibility"]
-
-[dependency-groups]
-dev = [
-    "pytest>=9.0.2",
-    "pandas>=2.0",
-    "pyarrow>=10.0",
-    "databricks-sdk>=0.99.0",
-]

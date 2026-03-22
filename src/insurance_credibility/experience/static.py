@@ -163,10 +163,18 @@ class StaticCredibilityModel:
             If fit() has not been called.
         """
         self._check_fitted()
-        assert self.kappa_ is not None
-        assert self.exposures_ok(history)
-
-        assert history.exposures is not None
+        if self.kappa_ is None:
+            raise ValueError("kappa_ is None after fit — this should not happen.")
+        if not self.exposures_ok(history):
+            raise ValueError(
+                f"Policy '{history.policy_id}' has no exposure data. "
+                "StaticCredibilityModel requires at least one period of exposure."
+            )
+        if history.exposures is None:
+            raise ValueError(
+                f"Policy '{history.policy_id}' has exposures=None. "
+                "All ClaimsHistory objects must have non-None exposures."
+            )
         t = history.total_exposure  # effective credibility weight
         omega_t = t / (t + self.kappa_)
 
@@ -175,7 +183,11 @@ class StaticCredibilityModel:
 
         # Credibility factor: omega * (empirical / prior) + (1 - omega)
         if mu <= 0.0:
-            return 1.0
+            raise ValueError(
+                f"prior_premium for policy '{history.policy_id}' is {mu} (must be > 0). "
+                "The credibility formula CF = omega*(Y_bar/mu) + (1-omega) requires a "
+                "positive a priori rate mu. Set prior_premium to the expected base rate."
+            )
 
         cf = omega_t * (y_bar / mu) + (1.0 - omega_t)
         return max(cf, 0.0)  # guard against negative values from rounding
@@ -222,8 +234,13 @@ class StaticCredibilityModel:
             omega_t = t / (t + kappa) in [0, 1], where t is total exposure.
         """
         self._check_fitted()
-        assert self.kappa_ is not None
-        assert history.exposures is not None
+        if self.kappa_ is None:
+            raise ValueError("kappa_ is None after fit — this should not happen.")
+        if history.exposures is None:
+            raise ValueError(
+                f"Policy '{history.policy_id}' has exposures=None. "
+                "credibility_weight() requires non-None exposures."
+            )
         t = history.total_exposure
         return t / (t + self.kappa_)
 
@@ -239,7 +256,11 @@ class StaticCredibilityModel:
         Returns (kappa, within_variance, between_variance).
         """
         # Compute per-policy exposure-weighted mean frequencies
-        assert all(h.exposures is not None for h in histories)
+        if not all(h.exposures is not None for h in histories):
+            raise ValueError(
+                "All ClaimsHistory objects must have non-None exposures for kappa estimation. "
+                "Check that every history in the portfolio has valid exposure data."
+            )
         n = len(histories)
 
         exposures = [np.array(h.exposures, dtype=float) for h in histories]

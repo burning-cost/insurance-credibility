@@ -57,7 +57,12 @@ from .experience import (
     seniority_weights,
 )
 
-__version__ = "0.1.4"
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("insurance-credibility")
+except PackageNotFoundError:
+    __version__ = "0.0.0"  # not installed
 
 __all__ = [
     # Classical

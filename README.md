@@ -162,3 +162,17 @@ A ready-to-run Databricks notebook benchmarking this library against standard ap
 ## Licence
 
 MIT
+
+---
+
+## Part of the Burning Cost Toolkit
+
+Open-source Python libraries for UK personal lines insurance pricing. [Browse all libraries](https://burning-cost.github.io/tools/)
+
+| Library | Description |
+|---------|-------------|
+| [insurance-conformal](https://github.com/burning-cost/insurance-conformal) | Distribution-free prediction intervals — uncertainty quantification for credibility-blended estimates |
+| [insurance-monitoring](https://github.com/burning-cost/insurance-monitoring) | Model drift detection — monitors whether credibility parameters remain valid as portfolio composition shifts |
+| [insurance-governance](https://github.com/burning-cost/insurance-governance) | Model validation and MRM governance — sign-off pack for credibility models entering production |
+| [insurance-causal](https://github.com/burning-cost/insurance-causal) | DML causal inference — establishes whether scheme-level effects are causal or driven by selection |
+| [insurance-whittaker](https://github.com/burning-cost/insurance-whittaker) | Whittaker-Henderson smoothing — smooths the raw experience rates that credibility weighting then blends |

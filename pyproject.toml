@@ -7,7 +7,7 @@ name = "insurance-credibility"
 version = "0.1.4"
 description = "Credibility models for UK non-life insurance pricing: classical Bühlmann-Straub and individual-policy Bayesian experience rating"
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
 authors = [
     { name = "Burning Cost", email = "pricing.frontier@gmail.com" }
 ]

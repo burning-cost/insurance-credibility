@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "insurance-credibility"
-version = "0.1.5"
+version = "0.1.6"
 description = "Credibility models for UK non-life insurance pricing: classical Bühlmann-Straub and individual-policy Bayesian experience rating"
 readme = "README.md"
 license = "MIT"
@@ -40,8 +40,6 @@ dependencies = [
     "numpy>=1.24",
     "scipy>=1.10",
     "polars>=1.0",
-    # Security: pin transitive dep to fix CVE-2026-30922 (DoS via unbounded recursion)
-    "pyasn1>=0.6.3",
 ]
 
 [project.optional-dependencies]

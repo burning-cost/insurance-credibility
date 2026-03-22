@@ -20,6 +20,8 @@ keywords = [
     "empirical-bayes",
     "experience-rating",
     "bayesian",
+    "UK",
+    "personal lines",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -57,10 +59,11 @@ dev = [
 ]
 
 [project.urls]
+Homepage = "https://burning-cost.github.io/insurance-credibility"
 Repository = "https://github.com/burning-cost/insurance-credibility"
+Changelog = "https://github.com/burning-cost/insurance-credibility/releases"
+Documentation = "https://burning-cost.github.io/insurance-credibility"
 Issues = "https://github.com/burning-cost/insurance-credibility/issues"
-Homepage = "https://github.com/burning-cost/insurance-credibility"
-Documentation = "https://github.com/burning-cost/insurance-credibility#readme"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/insurance_credibility"]

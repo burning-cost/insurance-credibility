@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "insurance-credibility"
-version = "0.1.6"
+version = "0.1.7"
 description = "Credibility models for UK non-life insurance pricing: classical Bühlmann-Straub and individual-policy Bayesian experience rating"
 readme = "README.md"
 license = "MIT"
@@ -37,7 +37,7 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "numpy>=1.24",
+    "numpy>=1.25",
     "scipy>=1.10",
     "polars>=1.0",
 ]
@@ -53,7 +53,7 @@ dev = [
     "pytest-cov>=4.0",
     "pandas>=2.0",
     "pyarrow>=10.0",
-    "numpy>=1.24",
+    "numpy>=1.25",
     "scipy>=1.10",
     "polars>=1.0",
 ]

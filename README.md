@@ -11,6 +11,10 @@ Thin scheme data and flat NCD tables both have the same problem: they either giv
 
 **Blog post:** [Bühlmann-Straub Credibility in Python: Blending Thin Segments with Portfolio Experience](https://burning-cost.github.io/2026/02/19/buhlmann-straub-credibility-in-python/)
 
+## Part of the Burning Cost stack
+
+Takes segment-level experience data: earned exposure, observed loss ratios, scheme panels. Feeds credibility-weighted estimates into [insurance-gam](https://github.com/burning-cost/insurance-gam) (as adjusted targets for tariff fitting) and [insurance-optimise](https://github.com/burning-cost/insurance-optimise) (as scheme-level technical price inputs). → [See the full stack](https://burning-cost.github.io/stack/)
+
 ## Why use this?
 
 - Flat NCD tables assign the same maximum discount regardless of how long the policy has been clean or how large the fleet is — Bühlmann-Straub credibility gives the mathematically optimal blend of individual experience and portfolio rate, weighted by earned exposure.

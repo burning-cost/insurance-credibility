@@ -7,7 +7,7 @@
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/burning-cost/insurance-credibility/blob/main/notebooks/quickstart.ipynb)
 
 
-Credibility models for UK non-life insurance pricing: Bühlmann-Straub group credibility and Bayesian experience rating at individual policy level.
+Thin scheme data and flat NCD tables both have the same problem: they either give too much weight to noise or ignore genuine experience entirely. insurance-credibility implements Bühlmann-Straub credibility weighting for group pricing and Bayesian experience rating at individual policy level, finding the statistically optimal blend between a scheme's own history and the portfolio average.
 
 **Blog post:** [Bühlmann-Straub Credibility in Python: Blending Thin Segments with Portfolio Experience](https://burning-cost.github.io/2026/02/19/buhlmann-straub-credibility-in-python/)
 
@@ -179,6 +179,15 @@ A validation notebook with known-DGP comparisons (raw vs manual Z vs Bühlmann-S
 - Ahn, J.Y., Jeong, H., Lu, Y. & Wüthrich, M.V. (2023). "Dynamic Bayesian Credibility." arXiv:2308.16058.
 - Calcetero, V., Badescu, A. & Lin, X.S. (2024). "Credibility theory for the 21st century." *ASTIN Bulletin*.
 - Wüthrich, M.V. (2024). "Transformer models for individual experience rating." *European Actuarial Journal*.
+
+
+## Limitations
+
+- Bühlmann-Straub structural parameter estimation (within-group variance v, between-group variance a) requires at least 30–50 groups and 3+ years of data to converge reliably. On the 30-group, 5-year benchmark, VHM was still underestimated by 57.6%. In thin portfolios, treat credibility factors as directional and apply a floor on Z rather than accepting the model's implied shrinkage.
+- `StaticCredibilityModel` assumes homoscedastic within-policy variance. If some policies have systematically higher volatility (large fleets vs small fleets), fitting a single kappa across the whole portfolio will over-credibilise small policies and under-credibilise large ones. Segment by policy size tier before fitting.
+- Experience rating kappa estimation needs at least 50–100 policies with 2 or more years of history. Below this, the kappa estimate is unreliable.
+- The Poisson-Gamma conjugate structure may understate overdispersion if genuine negative binomial clustering is present in the data (e.g., households with multiple policyholders). Check Pearson chi-squared goodness-of-fit after fitting.
+- Structural parameters must be refitted periodically as portfolio composition changes. Stale kappa estimates from a significantly different historical book produce miscalibrated experience adjustments.
 
 
 ## Related Libraries

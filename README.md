@@ -198,6 +198,10 @@ A validation notebook with known-DGP comparisons (raw vs manual Z vs Bühlmann-S
 | [insurance-multilevel](https://github.com/burning-cost/insurance-multilevel) | Two-stage CatBoost + REML random effects for broker and scheme factors in high-cardinality portfolios |
 | [experience-rating](https://github.com/burning-cost/experience-rating) | NCD systems and experience modification factors — uses credibility weighting for individual policy experience rating |
 
+## Training Course
+
+Want structured learning? [Insurance Pricing in Python](https://burning-cost.github.io/course) is a 12-module course covering the full pricing workflow. Module 6 covers credibility theory — Bühlmann-Straub, shrinkage estimation, and blending thin-segment experience with portfolio priors. £97 one-time.
+
 ## Licence
 
 MIT

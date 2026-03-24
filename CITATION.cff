@@ -1,0 +1,59 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "insurance-credibility"
+abstract: >
+  Credibility models for UK non-life insurance pricing. Implements
+  Bühlmann-Straub group credibility for scheme and fleet pricing, hierarchical
+  Bühlmann-Straub for nested group structures, and individual policy experience
+  rating via dynamic Poisson-Gamma state-space models. All models use
+  exposure-weighted structural parameter estimation with method of moments.
+authors:
+  - name: "Burning Cost Contributors"
+url: "https://github.com/burning-cost/insurance-credibility"
+repository-code: "https://github.com/burning-cost/insurance-credibility"
+license: MIT
+version: "0.1.6"
+date-released: "2026-03-21"
+keywords:
+  - insurance
+  - credibility theory
+  - Bühlmann-Straub
+  - experience rating
+  - actuarial
+references:
+  - type: book
+    title: "A Course in Credibility Theory and Its Applications"
+    authors:
+      - family-names: Bühlmann
+        given-names: Hans
+      - family-names: Gisler
+        given-names: Alois
+    publisher: Springer
+    year: 2005
+    doi: "10.1007/3-540-29273-X"
+  - type: article
+    title: "Dynamic Bayesian Credibility"
+    authors:
+      - family-names: Ahn
+        given-names: Jae Youn
+      - family-names: Jeong
+        given-names: Himchan
+      - family-names: Lu
+        given-names: Yi
+      - family-names: Wüthrich
+        given-names: Mario V.
+    year: 2023
+    url: "https://arxiv.org/abs/2308.16058"
+  - type: article
+    title: "Credibility theory for the 21st century"
+    authors:
+      - family-names: Calcetero
+        given-names: Victor
+      - family-names: Badescu
+        given-names: Andrei
+      - family-names: Lin
+        given-names: X. Sheldon
+    journal: "ASTIN Bulletin"
+    year: 2024
+    doi: "10.1017/asb.2024.14"

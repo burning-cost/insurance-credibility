@@ -104,6 +104,10 @@ cf = model.predict(histories[0])
 posterior_premium = histories[0].prior_premium * cf
 ```
 
+---
+
+If this is useful, a ⭐ on GitHub helps others find it.
+
 ## Models
 
 ### Classical credibility

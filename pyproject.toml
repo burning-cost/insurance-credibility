@@ -37,7 +37,7 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "numpy>=1.25",
+    "numpy>=2.0",
     "scipy>=1.10",
     "polars>=1.0",
 ]
@@ -45,15 +45,15 @@ dependencies = [
 [project.optional-dependencies]
 pandas = [
     "pandas>=2.0",
-    "pyarrow>=10.0",
+    "pyarrow>=14.0",
 ]
 deep = ["torch>=2.0"]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "pandas>=2.0",
-    "pyarrow>=10.0",
-    "numpy>=1.25",
+    "pyarrow>=14.0",
+    "numpy>=2.0",
     "scipy>=1.10",
     "polars>=1.0",
 ]

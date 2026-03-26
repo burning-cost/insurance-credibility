@@ -5,6 +5,7 @@
 [![Tests](https://github.com/burning-cost/insurance-credibility/actions/workflows/tests.yml/badge.svg)](https://github.com/burning-cost/insurance-credibility/actions/workflows/tests.yml)
 [![License](https://img.shields.io/badge/license-BSD--3-blue)]()
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/burning-cost/insurance-credibility/blob/main/notebooks/quickstart.ipynb)
+[![nbviewer](https://img.shields.io/badge/render-nbviewer-orange)](https://nbviewer.org/github/burning-cost/insurance-credibility/blob/main/notebooks/quickstart.ipynb)
 
 
 Thin scheme data and flat NCD tables both have the same problem: they either give too much weight to noise or ignore genuine experience entirely. insurance-credibility implements Bühlmann-Straub credibility weighting for group pricing and Bayesian experience rating at individual policy level, finding the statistically optimal blend between a scheme's own history and the portfolio average.

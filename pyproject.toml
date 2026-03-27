@@ -33,6 +33,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Information Analysis",
     "Topic :: Office/Business :: Financial",
 ]
 requires-python = ">=3.10"
@@ -59,11 +60,11 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://burning-cost.github.io/insurance-credibility"
+Homepage = "https://burning-cost.github.io/"
 Repository = "https://github.com/burning-cost/insurance-credibility"
 Changelog = "https://github.com/burning-cost/insurance-credibility/releases"
 Documentation = "https://burning-cost.github.io/insurance-credibility"
-Issues = "https://github.com/burning-cost/insurance-credibility/issues"
+"Bug Tracker" = "https://github.com/burning-cost/insurance-credibility/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/insurance_credibility"]

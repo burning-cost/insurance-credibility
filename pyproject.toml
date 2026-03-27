@@ -75,8 +75,3 @@ addopts = "-v --tb=short"
 
 [tool.coverage.run]
 source = ["src/insurance_credibility"]
-
-[dependency-groups]
-dev = [
-    "pytest-cov>=7.0.0",
-]

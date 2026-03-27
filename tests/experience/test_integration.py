@@ -219,7 +219,7 @@ class TestEdgeCasesIntegration:
         model.fit(histories)
         df = model.predict_batch(histories)
 
-        assert df["policy_id"].dtype == pl.Utf8 or df["policy_id"].dtype == pl.String
+        assert df["policy_id"].dtype == pl.String or df["policy_id"].dtype == pl.String
         assert df["prior_premium"].dtype in (pl.Float64, pl.Float32)
         assert df["credibility_factor"].dtype in (pl.Float64, pl.Float32)
         assert df["posterior_premium"].dtype in (pl.Float64, pl.Float32)

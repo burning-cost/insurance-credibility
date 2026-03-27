@@ -298,7 +298,7 @@ class TestValidatePanelData:
 
     def test_empty_dataframe_raises(self):
         df = pl.DataFrame({
-            "group": pl.Series([], dtype=pl.Utf8),
+            "group": pl.Series([], dtype=pl.String),
             "period": pl.Series([], dtype=pl.Int64),
             "loss": pl.Series([], dtype=pl.Float64),
             "weight": pl.Series([], dtype=pl.Float64),

@@ -207,7 +207,7 @@ wheels = [
 
 [[package]]
 name = "insurance-credibility"
-version = "0.1.6"
+version = "0.1.7"
 source = { editable = "." }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -239,16 +239,21 @@ pandas = [
     { name = "pyarrow" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest-cov" },
+]
+
 [package.metadata]
 requires-dist = [
-    { name = "numpy", specifier = ">=1.24" },
-    { name = "numpy", marker = "extra == 'dev'", specifier = ">=1.24" },
+    { name = "numpy", specifier = ">=2.0" },
+    { name = "numpy", marker = "extra == 'dev'", specifier = ">=2.0" },
     { name = "pandas", marker = "extra == 'dev'", specifier = ">=2.0" },
     { name = "pandas", marker = "extra == 'pandas'", specifier = ">=2.0" },
     { name = "polars", specifier = ">=1.0" },
     { name = "polars", marker = "extra == 'dev'", specifier = ">=1.0" },
-    { name = "pyarrow", marker = "extra == 'dev'", specifier = ">=10.0" },
-    { name = "pyarrow", marker = "extra == 'pandas'", specifier = ">=10.0" },
+    { name = "pyarrow", marker = "extra == 'dev'", specifier = ">=14.0" },
+    { name = "pyarrow", marker = "extra == 'pandas'", specifier = ">=14.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
     { name = "scipy", specifier = ">=1.10" },
@@ -256,6 +261,9 @@ requires-dist = [
     { name = "torch", marker = "extra == 'deep'", specifier = ">=2.0" },
 ]
 provides-extras = ["pandas", "deep", "dev"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest-cov", specifier = ">=7.0.0" }]
 
 [[package]]
 name = "jinja2"

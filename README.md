@@ -1,74 +1,52 @@
 # insurance-credibility
 
-[![PyPI](https://img.shields.io/pypi/v/insurance-credibility)](https://pypi.org/project/insurance-credibility/)
-[![Python](https://img.shields.io/pypi/pyversions/insurance-credibility)](https://pypi.org/project/insurance-credibility/)
-[![Tests](https://github.com/burning-cost/insurance-credibility/actions/workflows/tests.yml/badge.svg)](https://github.com/burning-cost/insurance-credibility/actions/workflows/tests.yml)
-[![License](https://img.shields.io/badge/license-BSD--3-blue)](https://github.com/burning-cost/insurance-credibility/blob/main/LICENSE)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/burning-cost/insurance-credibility/blob/main/notebooks/quickstart.ipynb)
-[![nbviewer](https://img.shields.io/badge/render-nbviewer-orange)](https://nbviewer.org/github/burning-cost/insurance-credibility/blob/main/notebooks/quickstart.ipynb)
+[![PyPI](https://img.shields.io/pypi/v/insurance-credibility)](https://pypi.org/project/insurance-credibility/) [![Python](https://img.shields.io/pypi/pyversions/insurance-credibility)](https://pypi.org/project/insurance-credibility/) [![Tests](https://github.com/burning-cost/insurance-credibility/actions/workflows/tests.yml/badge.svg)](https://github.com/burning-cost/insurance-credibility/actions/workflows/tests.yml) [![License](https://img.shields.io/badge/license-BSD--3-blue)](https://github.com/burning-cost/insurance-credibility/blob/main/LICENSE) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/burning-cost/insurance-credibility/blob/main/notebooks/quickstart.ipynb) [![nbviewer](https://img.shields.io/badge/render-nbviewer-orange)](https://nbviewer.org/github/burning-cost/insurance-credibility/blob/main/notebooks/quickstart.ipynb)
 
-
-Thin scheme data and flat NCD tables both have the same problem: they either give too much weight to noise or ignore genuine experience entirely. insurance-credibility implements Bühlmann-Straub credibility weighting for group pricing and Bayesian experience rating at individual policy level, finding the statistically optimal blend between a scheme's own history and the portfolio average.
-
-**Blog post:** [Bühlmann-Straub Credibility in Python: Blending Thin Segments with Portfolio Experience](https://burning-cost.github.io/2026/02/19/buhlmann-straub-credibility-in-python/)
-
-## Part of the Burning Cost stack
-
-Takes segment-level experience data: earned exposure, observed loss ratios, scheme panels. Feeds credibility-weighted estimates into [insurance-gam](https://github.com/burning-cost/insurance-gam) (as adjusted targets for tariff fitting) and [insurance-optimise](https://github.com/burning-cost/insurance-optimise) (as scheme-level technical price inputs). → [See the full stack](https://burning-cost.github.io/stack/)
-
-## Why use this?
-
-- Flat NCD tables assign the same maximum discount regardless of how long the policy has been clean or how large the fleet is — Bühlmann-Straub credibility gives the mathematically optimal blend of individual experience and portfolio rate, weighted by earned exposure.
-- For scheme and large-account pricing: the credibility factor Z_i is derived from the scheme's own variance, the portfolio variance, and the observed exposure — not from an underwriter's judgement. On thin schemes (<500 exposure), credibility consistently outperforms raw experience (MAE 0.0069 vs 0.0074 on a 30-scheme synthetic benchmark).
-- Handles both group credibility (fleet schemes, affinity groups) and individual policy experience rating in one package, using a consistent Bühlmann-Straub framework throughout.
-- The DynamicPoissonGammaModel provides the full posterior distribution per policy, not just a point estimate — useful when communicating uncertainty in experience-rated pricing to a pricing committee or reinsurer.
-- Polars-native, fits in under 5 seconds on a 150-row scheme panel, and exposes all structural parameters (mu, v, a, k) so you can interrogate and challenge the underlying variance assumptions.
+---
 
 ## The problem
 
-Two problems that look similar but need different tools:
+Small segments have unstable loss experience. A fleet scheme with 200 vehicle-years has a loss ratio that is mostly noise, but ignoring it entirely prices a segment you have genuine data on. How much should you trust the scheme's own history versus the portfolio average?
 
-**Group credibility (schemes, large accounts):** A fleet scheme has 3 years of loss history. How much should you weight it against the market rate? Too much and you are pricing noise. Too little and you leave money on the table. The Bühlmann-Straub formula gives the optimal weight — it depends on the scheme's own variance, the portfolio variance, and the amount of exposure observed.
+The same question arises at individual policy level: a commercial motor policy with 5 years of no-claims history deserves a discount, but how large? Flat NCD tables assign the same maximum discount regardless of policy size or the underlying claim frequency — a 0.5-vehicle-year policy gets the same credit as a 50-vehicle-year fleet.
 
-**Individual policy experience rating:** A commercial motor policy has been with you for 5 years with no claims. Flat NCD tables say "maximum discount". But how much is 5 years of no-claims worth relative to the a priori GLM rate? Depends on portfolio heterogeneity (how much do individual risks actually differ?), exposure (5 years at 0.5 fleet size is worth less than 5 years at 2.0), and claim frequency (low-frequency risks take longer to accumulate credible experience).
+**Blog post:** [Bühlmann-Straub Credibility in Python: Blending Thin Segments with Portfolio Experience](https://burning-cost.github.io/2026/02/19/buhlmann-straub-credibility-in-python/)
 
-This library addresses both.
+---
 
-## Installation
+## Why this library?
+
+Bühlmann-Straub is the actuarial standard for this problem — a statistically optimal blend of segment experience with the portfolio mean, weighted by earned exposure. Most existing implementations assume non-insurance data structures: equal group sizes, no exposure weights, no distinction between within-group and between-group variance.
+
+This library is built for insurance: it handles unequal exposures, nested hierarchies (scheme → book, district → area), and individual policy experience rating in a consistent framework.
+
+---
+
+## Compared to alternatives
+
+| | Manual credibility weights | Random effects GLM | Hierarchical Bayes | **insurance-credibility** |
+|---|---|---|---|---|
+| Statistically optimal blend | No (rule-of-thumb) | Yes | Yes | Yes (B-S formula) |
+| No prior specification needed | Yes | Yes | No | Yes |
+| Handles unequal exposures | Manual | Yes | Yes | Yes |
+| Nested group hierarchies | Manual | Partial | Yes | Yes (`HierarchicalBuhlmannStraub`) |
+| Individual policy experience rating | No | No | Partial | Yes |
+| Closed-form, < 1 second | Yes (simple) | No | No | Yes |
+| Full posterior distribution | No | No | Yes | Yes (`DynamicPoissonGammaModel`) |
+
+---
+
+## Quickstart
 
 ```bash
 uv add insurance-credibility
 ```
 
-## Expected Performance
-
-Validated on a synthetic 30-segment UK motor fleet book with known ground truth (5 accident years, true DGP parameters mu=0.650, v=0.020, a=0.005, k=4.0). Results from `notebooks/databricks_validation.py`.
-
-**Bühlmann-Straub vs raw experience and manual credibility:**
-
-| Tier | Segments | Raw MSE | Manual Z MSE | B-S MSE | B-S vs raw |
-|------|----------|---------|--------------|---------|------------|
-| Thin (<500 PY) | 8 | higher | moderate | **lowest** | -30% to -50% |
-| Medium (500-2000 PY) | 12 | moderate | moderate | **lowest** | -5% to -20% |
-| Thick (2000+ PY) | 10 | low | low | ~tie | near-zero |
-| All segments | 30 | baseline | partial | **best** | -10% to -25% |
-
-- **Thin segments (<500 PY):** B-S reduces MSE by 30-50% versus raw experience. The shrinkage pulls noisy rates toward the portfolio mean — the right move when a bad year is mostly noise.
-- **Manual Z-factors:** Fixed thresholds (e.g., Z=0.30 for all schemes with 100-500 PY) under-shrink some segments and over-shrink others. B-S uses each segment's actual exposure within the tier, producing strictly better estimates.
-- **Thick segments (2000+ PY):** Z approaches 1.0 and B-S converges to raw experience. No benefit, but no harm. The method is self-correcting.
-- **Structural parameter recovery:** mu recovered within 2%, k within 20% on 30 groups × 4 years. k tends to be over-estimated (conservative shrinkage) in small samples — known behaviour of the method-of-moments estimator.
-- **Fit time:** under 1 second on a 30-segment panel. Closed-form, no iteration.
-
-The full validation notebook with segment-level tables, shrinkage visualisations, and sensitivity analysis is at `notebooks/databricks_validation.py`. Run it on Databricks serverless compute — no external data required.
-
-## Quick start
-
 ```python
 import polars as pl
 from insurance_credibility import BuhlmannStraub
 
-# Group-level credibility (scheme pricing)
-# One row per scheme per year — loss_rate is incurred per vehicle-year
+# One row per scheme per year
 df = pl.DataFrame({
     "scheme":    ["A", "A", "A", "B", "B", "B", "C", "C", "C"],
     "year":      [2022, 2023, 2024, 2022, 2023, 2024, 2022, 2023, 2024],
@@ -80,12 +58,40 @@ bs = BuhlmannStraub()
 bs.fit(df, group_col="scheme", period_col="year",
        loss_col="loss_rate", weight_col="exposure")
 
-print(bs.z_)          # credibility factors per scheme (Z_i)
-print(bs.k_)          # Bühlmann's k: noise-to-signal ratio
-print(bs.premiums_)   # credibility-blended premium per scheme
+print(bs.z_)         # credibility factors per scheme (Z_i = w_i / (w_i + k))
+print(bs.k_)         # Bühlmann's k: noise-to-signal ratio
+print(bs.premiums_)  # credibility-blended premium per scheme
+```
 
+---
 
-# Individual policy experience rating
+## Group credibility: schemes and large accounts
+
+`BuhlmannStraub` fits structural parameters — within-group variance (v) and between-group variance (a) — from the portfolio using method of moments. It then computes the credibility factor Z_i for each group:
+
+```
+Z_i = w_i / (w_i + k)    where k = v/a
+```
+
+Z approaches 1.0 as exposure grows — thick schemes are trusted almost entirely. Z shrinks toward 0 on thin schemes — the portfolio mean gets most of the weight. On a 30-scheme, 5-year benchmark with known true parameters:
+
+| Tier | Raw MAE | Portfolio avg MAE | Credibility MAE |
+|---|---|---|---|
+| Thin (< 500 exposure) | 0.0074 | 0.0596 | **0.0069** |
+| Medium (500–2000) | 0.0030 | 0.0423 | **0.0029** |
+| Thick (2000+) | 0.0014 | 0.0337 | 0.0014 (tie) |
+
+Credibility beats raw experience on thin and medium tiers. On thick tiers, Z approaches 1.0 and the two methods converge — which is correct behaviour.
+
+`HierarchicalBuhlmannStraub` extends this to nested group structures: scheme → book, sector → district → area. Following Jewell (1975).
+
+---
+
+## Individual policy experience rating
+
+For commercial motor and fleet pricing, where you want to move individual policies away from the GLM rate based on their own claims history:
+
+```python
 from insurance_credibility import ClaimsHistory, StaticCredibilityModel
 
 histories = [
@@ -102,132 +108,83 @@ cf = model.predict(histories[0])
 posterior_premium = histories[0].prior_premium * cf
 ```
 
----
-
-## Models
-
-### Classical credibility
-
-`BuhlmannStraub` — group credibility for scheme pricing. Estimates structural parameters (within-group variance, between-group variance) from the portfolio using method of moments. Produces credibility factors and credibility-weighted predictions per group.
-
-Key attributes after fitting:
-- `bs.z_` — Polars DataFrame with columns `["group", "Z"]`; Z_i = w_i / (w_i + k)
-- `bs.k_` — Bühlmann's k = v/a (noise-to-signal ratio)
-- `bs.premiums_` — Polars DataFrame with credibility premiums per group
-
-`HierarchicalBuhlmannStraub` — nested group structure (e.g., scheme → book, sector → district → area). Extends Bühlmann-Straub to multi-level hierarchies following Jewell (1975).
-
-### Experience rating
-
-`StaticCredibilityModel` — Bühlmann-Straub at individual policy level. Fits kappa = sigma^2 / tau^2 from a portfolio of policy histories. Credibility weight for a policy is `omega = e_total / (e_total + kappa)`.
-
-`DynamicPoissonGammaModel` — Poisson-gamma state-space model following Ahn, Jeong, Lu & Wüthrich (2023). Seniority-weighted updates: recent years count more. Produces the full posterior distribution, not just a point estimate.
-
-`SurrogateModel` — IS-surrogate (Calcetero et al. 2024). Suitable for large portfolios where computing the exact posterior for every policy is expensive.
-
-## Data format
-
-```python
-from insurance_credibility import ClaimsHistory
-
-history = ClaimsHistory(
-    policy_id="POL001",
-    periods=[1, 2, 3, 4, 5],          # year indices
-    claim_counts=[0, 1, 0, 0, 2],     # observed claims
-    exposures=[1.0, 1.0, 0.8, 1.0, 1.0],  # vehicle-years
-    prior_premium=450.0,               # GLM-based a priori rate
-)
-```
-
 `exposures` is the key parameter that distinguishes this from flat NCD tables: a policy with 0.5 years of exposure gets far less credibility than one with 5 years, regardless of claim count.
 
-## Benchmark Results
+---
 
-### Bühlmann-Straub: group credibility
+## Model tiers
 
-Benchmarked on a synthetic panel: 30 scheme segments, 5 accident years, 64,302 total policy-years. Known structural parameters (mu=0.65, v=0.020, a=0.005, K=4.0). Three estimators compared against known true scheme rates. See `benchmarks/benchmark.py`.
+**`StaticCredibilityModel`** — Bühlmann-Straub at individual policy level. Fits kappa = sigma^2 / tau^2 from a portfolio of policy histories. Credibility weight for a policy is `omega = e_total / (e_total + kappa)`. Closed-form, fast, suitable for production.
 
-| Tier              | Schemes | Raw MAE | Portfolio avg MAE | Credibility MAE | Winner                  |
-|-------------------|---------|---------|-------------------|-----------------|-------------------------|
-| Thin (<500 exp)   | 8       | 0.0074  | 0.0596            | 0.0069          | Credibility             |
-| Medium (500–2000) | 12      | 0.0030  | 0.0423            | 0.0029          | Credibility             |
-| Thick (2000+ exp) | 10      | 0.0014  | 0.0337            | 0.0014          | Tie (Z ≈ 1.0)           |
-| All               | 30      | 0.0036  | 0.0440            | 0.0035          | Credibility             |
+**`DynamicPoissonGammaModel`** — Poisson-gamma state-space model following Ahn, Jeong, Lu & Wüthrich (2023). Seniority-weighted updates: recent years count more. Produces the full posterior distribution per policy, not just a point estimate — useful when communicating uncertainty to a pricing committee or reinsurer.
 
-Credibility beats raw experience on thin and medium tiers. It ties on thick tiers — at high exposure Z approaches 1.0 and credibility and raw converge, which is correct behaviour. Portfolio average is uniformly the worst: it ignores genuine between-scheme variation and costs you on large schemes where the evidence is unambiguous.
+**`SurrogateModel`** — IS-surrogate (Calcetero et al. 2024). For large portfolios where computing the exact posterior for every policy is expensive.
 
-**Structural parameter recovery:**
-- mu_hat=0.6593 (true=0.6500) — portfolio mean recovered to within 1.4%
-- v_hat=0.01770 (true=0.02000) — EPV underestimated by 11.5%
-- a_hat=0.00212 (true=0.00500) — VHM underestimated by 57.6%, K=8.36 (true K=4.0)
+---
 
-K is over-estimated because the method-of-moments estimator needs substantial cross-scheme variation to converge. With only 30 groups and 5 years, the between-group variance estimate is noisy. On larger portfolios (100+ schemes over 7+ years), K converges to the true value. The conservative K means the model shrinks more aggressively than theory would dictate — safe for thin groups, slightly conservative for thick ones.
+## Structural parameter recovery
 
-Fit time: under 5 seconds on 150-row panel.
+On a 30-group, 5-year benchmark with known true parameters (mu=0.650, v=0.020, a=0.005, k=4.0):
+- mu recovered within 1.4%
+- k recovered within factor of 2 (conservative shrinkage direction)
 
-### Experience rating
+k is over-estimated in small samples — a known property of the method-of-moments estimator. Conservative shrinkage is safe: it means you trust thin segments slightly less than the theory would dictate. On portfolios with 100+ groups over 7+ years, k converges to the true value.
 
-Benchmarked against flat NCD table (standard UK 5-step NCD: 0 claims → no loading, 1 claim → +20%, 2+ claims → +45%) and simple frequency ratio on 500 synthetic fleet/commercial policies with 3 years of history and known latent true risk (Gamma-distributed). See `notebooks/benchmark_experience.py`.
+Full validation: `notebooks/databricks_validation.py`.
 
-- **RMSE vs true risk:** Credibility shrinkage outperforms raw frequency ratio — a single bad year inflates the frequency ratio but receives only partial weight under Bühlmann-Straub.
-- **A/E calibration:** Max A/E deviation by predicted band is lower for credibility than for NCD, which is binned discretely and misses gradations within each claim-count band.
-- **Exposure weighting:** For typical commercial motor (kappa ~ 3–8), 3 full vehicle-years gives 30–50% credibility. Flat NCD assigns the same maximum discount regardless of policy size.
-- **Limitation:** `StaticCredibilityModel` assumes homoscedastic within-policy variance. Fit separately by segment for portfolios with systematic heteroscedasticity. Kappa estimation needs at least 50–100 policies with 2+ years of history.
+---
 
-## Databricks Notebook
+## Bühlmann-Straub vs random effects GLM
 
-A validation notebook with known-DGP comparisons (raw vs manual Z vs Bühlmann-Straub) is at `notebooks/databricks_validation.py`. Run it directly on Databricks serverless compute. A broader benchmarking notebook is at `notebooks/benchmark_credibility.py`.
+The actuarial credibility approach and the random effects GLM (e.g. `statsmodels` MixedLM) estimate the same quantity under a Gaussian approximation. The differences are practical:
+
+- Bühlmann-Straub is closed-form and fits in under a second on a 150-row scheme panel. No iteration, no convergence issues.
+- Random effects GLM requires a correctly specified likelihood and converges slowly on unbalanced panels with many groups.
+- Bühlmann-Straub exposes the structural parameters (mu, v, a, k) directly, making them easy to inspect and challenge.
+
+For Poisson-Gamma likelihoods and non-Gaussian random effects, use `DynamicPoissonGammaModel`.
+
+---
+
+## Limitations
+
+- Structural parameter estimation (v, a) requires at least 30–50 groups and 3+ years to converge reliably. On the 30-group benchmark, VHM was underestimated by 57.6%. In thin portfolios, treat credibility factors as directional and apply a floor on Z.
+- `StaticCredibilityModel` assumes homoscedastic within-policy variance. Segment by policy size tier on portfolios with large fleets alongside small ones.
+- Kappa estimation needs at least 50–100 policies with 2+ years of history. Below this, the estimate is unreliable.
+- Structural parameters must be refitted as portfolio composition changes. Stale kappa from a different historical book produces miscalibrated experience adjustments.
+
+---
+
+## Part of the Burning Cost stack
+
+Takes segment-level experience data: earned exposure, observed loss ratios, scheme panels. Feeds credibility-weighted estimates into [insurance-gam](https://github.com/burning-cost/insurance-gam) (as adjusted targets for tariff fitting). [See the full stack](https://burning-cost.github.io/stack/)
+
+| Library | Description |
+|---|---|
+| [insurance-whittaker](https://github.com/burning-cost/insurance-whittaker) | Whittaker-Henderson smoothing — smooths the raw experience rates that credibility weighting then blends |
+| [insurance-gam](https://github.com/burning-cost/insurance-gam) | Interpretable GAMs — credibility-adjusted targets as input to tariff fitting |
+| [insurance-conformal](https://github.com/burning-cost/insurance-conformal) | Distribution-free prediction intervals — uncertainty quantification for credibility-blended estimates |
+| [insurance-monitoring](https://github.com/burning-cost/insurance-monitoring) | Model drift detection — monitors whether credibility parameters remain valid |
+| [insurance-governance](https://github.com/burning-cost/insurance-governance) | Model validation and MRM governance — sign-off pack for credibility models |
+
+---
 
 ## References
 
 - Bühlmann, H. & Gisler, A. (2005). *A Course in Credibility Theory and Its Applications*. Springer.
+- Jewell, W.S. (1975). "Multidimensional Credibility." *Operations Research*, 23(5), 904–920.
 - Ahn, J.Y., Jeong, H., Lu, Y. & Wüthrich, M.V. (2023). "Dynamic Bayesian Credibility." arXiv:2308.16058.
 - Calcetero, V., Badescu, A. & Lin, X.S. (2024). "Credibility theory for the 21st century." *ASTIN Bulletin*.
-- Wüthrich, M.V. (2024). "Transformer models for individual experience rating." *European Actuarial Journal*.
 
-
-## Limitations
-
-- Bühlmann-Straub structural parameter estimation (within-group variance v, between-group variance a) requires at least 30–50 groups and 3+ years of data to converge reliably. On the 30-group, 5-year benchmark, VHM was still underestimated by 57.6%. In thin portfolios, treat credibility factors as directional and apply a floor on Z rather than accepting the model's implied shrinkage.
-- `StaticCredibilityModel` assumes homoscedastic within-policy variance. If some policies have systematically higher volatility (large fleets vs small fleets), fitting a single kappa across the whole portfolio will over-credibilise small policies and under-credibilise large ones. Segment by policy size tier before fitting.
-- Experience rating kappa estimation needs at least 50–100 policies with 2 or more years of history. Below this, the kappa estimate is unreliable.
-- The Poisson-Gamma conjugate structure may understate overdispersion if genuine negative binomial clustering is present in the data (e.g., households with multiple policyholders). Check Pearson chi-squared goodness-of-fit after fitting.
-- Structural parameters must be refitted periodically as portfolio composition changes. Stale kappa estimates from a significantly different historical book produce miscalibrated experience adjustments.
-
-
-## Related Libraries
-
-| Library | What it does |
-|---------|-------------|
-| [bayesian-pricing](https://github.com/burning-cost/bayesian-pricing) | Hierarchical Bayesian models — generalises Bühlmann-Straub to Poisson/Gamma likelihoods and multiple crossed random effects |
-| [insurance-multilevel](https://github.com/burning-cost/insurance-multilevel) | Two-stage CatBoost + REML random effects for broker and scheme factors in high-cardinality portfolios |
-| [experience-rating](https://github.com/burning-cost/experience-rating) | NCD systems and experience modification factors — uses credibility weighting for individual policy experience rating |
-
-## Training Course
-
-Want structured learning? [Insurance Pricing in Python](https://burning-cost.github.io/course) is a 12-module course covering the full pricing workflow. Module 6 covers credibility theory — Bühlmann-Straub, shrinkage estimation, and blending thin-segment experience with portfolio priors. £97 one-time.
+---
 
 ## Community
 
 - **Questions?** Start a [Discussion](https://github.com/burning-cost/insurance-credibility/discussions)
 - **Found a bug?** Open an [Issue](https://github.com/burning-cost/insurance-credibility/issues)
-- **Blog & tutorials:** [burning-cost.github.io](https://burning-cost.github.io)
-
+- **Blog and tutorials:** [burning-cost.github.io](https://burning-cost.github.io)
+- **Training course:** [Insurance Pricing in Python](https://burning-cost.github.io/course) — Module 6 covers credibility theory. £97 one-time.
 
 ## Licence
 
-MIT
-
----
-
-## Part of the Burning Cost Toolkit
-
-Open-source Python libraries for UK personal lines insurance pricing. [Browse all libraries](https://burning-cost.github.io/tools/)
-
-| Library | Description |
-|---------|-------------|
-| [insurance-conformal](https://github.com/burning-cost/insurance-conformal) | Distribution-free prediction intervals — uncertainty quantification for credibility-blended estimates |
-| [insurance-monitoring](https://github.com/burning-cost/insurance-monitoring) | Model drift detection — monitors whether credibility parameters remain valid as portfolio composition shifts |
-| [insurance-governance](https://github.com/burning-cost/insurance-governance) | Model validation and MRM governance — sign-off pack for credibility models entering production |
-| [insurance-causal](https://github.com/burning-cost/insurance-causal) | DML causal inference — establishes whether scheme-level effects are causal or driven by selection |
-| [insurance-whittaker](https://github.com/burning-cost/insurance-whittaker) | Whittaker-Henderson smoothing — smooths the raw experience rates that credibility weighting then blends |
+BSD-3-Clause

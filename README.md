@@ -1,6 +1,8 @@
 # insurance-credibility
 
-[![PyPI](https://img.shields.io/pypi/v/insurance-credibility)](https://pypi.org/project/insurance-credibility/) [![Python](https://img.shields.io/pypi/pyversions/insurance-credibility)](https://pypi.org/project/insurance-credibility/) [![Tests](https://github.com/burning-cost/insurance-credibility/actions/workflows/tests.yml/badge.svg)](https://github.com/burning-cost/insurance-credibility/actions/workflows/tests.yml) [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/burning-cost/insurance-credibility/blob/main/LICENSE) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/burning-cost/insurance-credibility/blob/main/notebooks/quickstart.ipynb) [![nbviewer](https://img.shields.io/badge/render-nbviewer-orange)](https://nbviewer.org/github/burning-cost/insurance-credibility/blob/main/notebooks/quickstart.ipynb)
+**Bühlmann-Straub credibility and Bayesian experience rating for UK insurance pricing teams.**
+
+[![PyPI](https://img.shields.io/pypi/v/insurance-credibility)](https://pypi.org/project/insurance-credibility/) [![Python](https://img.shields.io/pypi/pyversions/insurance-credibility)](https://pypi.org/project/insurance-credibility/) [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/burning-cost/insurance-credibility/blob/main/LICENSE)
 
 ---
 
@@ -46,7 +48,6 @@ uv add insurance-credibility
 import polars as pl
 from insurance_credibility import BuhlmannStraub
 
-# One row per scheme per year
 df = pl.DataFrame({
     "scheme":    ["A", "A", "A", "B", "B", "B", "C", "C", "C"],
     "year":      [2022, 2023, 2024, 2022, 2023, 2024, 2022, 2023, 2024],
@@ -58,7 +59,7 @@ bs = BuhlmannStraub()
 bs.fit(df, group_col="scheme", period_col="year",
        loss_col="loss_rate", weight_col="exposure")
 
-print(bs.z_)         # credibility factors per scheme (Z_i = w_i / (w_i + k))
+print(bs.z_)         # credibility factors per scheme
 print(bs.k_)         # Bühlmann's k: noise-to-signal ratio
 print(bs.premiums_)  # credibility-blended premium per scheme
 ```
@@ -187,4 +188,4 @@ Takes segment-level experience data: earned exposure, observed loss ratios, sche
 
 ## Licence
 
-BSD-3-Clause
+MIT

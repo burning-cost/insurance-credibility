@@ -3,7 +3,7 @@
 [![PyPI](https://img.shields.io/pypi/v/insurance-credibility)](https://pypi.org/project/insurance-credibility/)
 [![Python](https://img.shields.io/pypi/pyversions/insurance-credibility)](https://pypi.org/project/insurance-credibility/)
 [![Tests](https://github.com/burning-cost/insurance-credibility/actions/workflows/tests.yml/badge.svg)](https://github.com/burning-cost/insurance-credibility/actions/workflows/tests.yml)
-[![License](https://img.shields.io/badge/license-BSD--3-blue)]()
+[![License](https://img.shields.io/badge/license-BSD--3-blue)](https://github.com/burning-cost/insurance-credibility/blob/main/LICENSE)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/burning-cost/insurance-credibility/blob/main/notebooks/quickstart.ipynb)
 [![nbviewer](https://img.shields.io/badge/render-nbviewer-orange)](https://nbviewer.org/github/burning-cost/insurance-credibility/blob/main/notebooks/quickstart.ipynb)
 
@@ -39,8 +39,6 @@ This library addresses both.
 ```bash
 uv add insurance-credibility
 ```
-
-> Questions or feedback? Start a [Discussion](https://github.com/burning-cost/insurance-credibility/discussions). Found it useful? A star helps others find it.
 
 ## Expected Performance
 
@@ -105,8 +103,6 @@ posterior_premium = histories[0].prior_premium * cf
 ```
 
 ---
-
-If this is useful, a ⭐ on GitHub helps others find it.
 
 ## Models
 
@@ -217,7 +213,6 @@ Want structured learning? [Insurance Pricing in Python](https://burning-cost.git
 - **Found a bug?** Open an [Issue](https://github.com/burning-cost/insurance-credibility/issues)
 - **Blog & tutorials:** [burning-cost.github.io](https://burning-cost.github.io)
 
-If this library saves you time, a star on GitHub helps others find it.
 
 ## Licence
 

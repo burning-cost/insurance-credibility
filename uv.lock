@@ -207,7 +207,7 @@ wheels = [
 
 [[package]]
 name = "insurance-credibility"
-version = "0.1.7"
+version = "0.1.8"
 source = { editable = "." }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -239,11 +239,6 @@ pandas = [
     { name = "pyarrow" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "pytest-cov" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "numpy", specifier = ">=2.0" },
@@ -261,9 +256,6 @@ requires-dist = [
     { name = "torch", marker = "extra == 'deep'", specifier = ">=2.0" },
 ]
 provides-extras = ["pandas", "deep", "dev"]
-
-[package.metadata.requires-dev]
-dev = [{ name = "pytest-cov", specifier = ">=7.0.0" }]
 
 [[package]]
 name = "jinja2"

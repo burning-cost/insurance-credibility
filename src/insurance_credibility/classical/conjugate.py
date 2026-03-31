@@ -138,6 +138,12 @@ class PoissonGammaCredibility:
             raise ValueError(f"prior_alpha must be positive, got {prior_alpha}")
         if prior_beta is not None and prior_beta <= 0:
             raise ValueError(f"prior_beta must be positive, got {prior_beta}")
+        if (prior_alpha is None) != (prior_beta is None):
+            raise ValueError(
+                "prior_alpha and prior_beta must both be provided or both be None. "
+                "Supplying only one is ambiguous. Provide both to use an external "
+                "prior, or omit both to calibrate from data."
+            )
 
         self.prior_alpha = prior_alpha
         self.prior_beta = prior_beta

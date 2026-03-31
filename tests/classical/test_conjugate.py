@@ -344,6 +344,13 @@ class TestValidation:
         with pytest.raises(ValueError, match="prior_beta"):
             PoissonGammaCredibility(prior_alpha=5.0, prior_beta=0.0)
 
+    def test_partial_prior_raises(self):
+        """Supplying only alpha or only beta should raise ValueError."""
+        with pytest.raises(ValueError, match="both"):
+            PoissonGammaCredibility(prior_alpha=6.0, prior_beta=None)
+        with pytest.raises(ValueError, match="both"):
+            PoissonGammaCredibility(prior_alpha=None, prior_beta=100.0)
+
     def test_not_fitted_raises_on_properties(self):
         model = PoissonGammaCredibility()
         with pytest.raises(RuntimeError, match="fit"):

@@ -6,6 +6,8 @@ Two subpackages covering the full credibility toolkit:
 classical
     Bühlmann-Straub (1970) group credibility and its hierarchical extension
     (Jewell 1975) for nested structures (scheme → book, sector → district → area).
+    Also includes PoissonGammaCredibility: the exact Bayesian credibility model
+    for claim count data (closed-form, no MCMC).
 
 experience
     Individual policy-level Bayesian experience rating. Four model tiers:
@@ -20,6 +22,12 @@ Quick start::
     bs.fit(df, group_col="scheme", period_col="year",
            loss_col="loss_rate", weight_col="exposure")
 
+    # Exact Bayesian credibility for claim counts
+    from insurance_credibility import PoissonGammaCredibility
+    model = PoissonGammaCredibility()
+    model.fit(df, group_col="scheme", claims_col="claims", exposure_col="exposure")
+    model.credibility_intervals(0.95)  # exact posterior intervals
+
     # Individual policy experience rating
     from insurance_credibility import ClaimsHistory, StaticCredibilityModel
     model = StaticCredibilityModel()
@@ -28,7 +36,12 @@ Quick start::
 """
 
 # Classical credibility
-from .classical import BuhlmannStraub, HierarchicalBuhlmannStraub, LevelResult
+from .classical import (
+    BuhlmannStraub,
+    HierarchicalBuhlmannStraub,
+    LevelResult,
+    PoissonGammaCredibility,
+)
 
 # Experience rating data types
 from .experience import CalibrationResult, ClaimsHistory
@@ -69,6 +82,7 @@ __all__ = [
     "BuhlmannStraub",
     "HierarchicalBuhlmannStraub",
     "LevelResult",
+    "PoissonGammaCredibility",
     # Experience — data types
     "ClaimsHistory",
     "CalibrationResult",

@@ -1,11 +1,11 @@
 """
-Classical Bühlmann-Straub credibility models for non-life insurance pricing.
+Classical credibility models for non-life insurance pricing.
 
-Implements the Bühlmann-Straub (1970) credibility model and its hierarchical
-extension (Jewell, 1975). The standard tool for blending group-level loss
-experience with the portfolio mean, weighted by exposure.
+Implements the Bühlmann-Straub (1970) credibility model, its hierarchical
+extension (Jewell, 1975), and the Poisson-Gamma conjugate Bayesian credibility
+model.
 
-Quick start::
+Quick start — Bühlmann-Straub::
 
     import polars as pl
     from insurance_credibility.classical import BuhlmannStraub
@@ -24,13 +24,25 @@ For hierarchical multi-level structures::
     model = HierarchicalBuhlmannStraub(level_cols=["region", "district", "sector"])
     model.fit(df, period_col="year", loss_col="loss_rate", weight_col="exposure")
     model.premiums_at("sector")
+
+For Poisson claim count data (exact Bayesian credibility)::
+
+    from insurance_credibility.classical import PoissonGammaCredibility
+
+    model = PoissonGammaCredibility()
+    model.fit(df, group_col="scheme", claims_col="claims", exposure_col="exposure")
+    model.summary()
+    model.credibility_intervals(0.95)   # exact posterior intervals
+    model.predict(claims=45, exposure=1000)  # score a new group
 """
 
 from .buhlmann_straub import BuhlmannStraub
+from .conjugate import PoissonGammaCredibility
 from .hierarchical import HierarchicalBuhlmannStraub, LevelResult
 
 __all__ = [
     "BuhlmannStraub",
     "HierarchicalBuhlmannStraub",
     "LevelResult",
+    "PoissonGammaCredibility",
 ]

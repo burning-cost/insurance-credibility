@@ -24,45 +24,72 @@ This library is built for insurance: it handles unequal exposures, nested hierar
 
 ---
 
-## Compared to alternatives
-
-| | Manual credibility weights | Random effects GLM | Hierarchical Bayes | **insurance-credibility** |
-|---|---|---|---|---|
-| Statistically optimal blend | No (rule-of-thumb) | Yes | Yes | Yes (B-S formula) |
-| No prior specification needed | Yes | Yes | No | Yes |
-| Handles unequal exposures | Manual | Yes | Yes | Yes |
-| Nested group hierarchies | Manual | Partial | Yes | Yes (`HierarchicalBuhlmannStraub`) |
-| Individual policy experience rating | No | No | Partial | Yes |
-| Closed-form, < 1 second | Yes (simple) | No | No | Yes |
-| Full posterior distribution | No | No | Yes | Yes (`DynamicPoissonGammaModel`) |
-
----
-
-## Quickstart
+## Installation
 
 ```bash
 uv add insurance-credibility
 ```
 
+Or with pip:
+
+```bash
+pip install insurance-credibility
+```
+
+**Dependencies**: `numpy >= 2.0`, `scipy >= 1.10`, `polars >= 1.0`. No pandas required — but pandas DataFrames are accepted as input and converted automatically.
+
+**Optional**: `pandas >= 2.0` for pandas input support. `torch >= 2.0` for the deep attention model.
+
+```bash
+uv add "insurance-credibility[pandas]"   # with pandas support
+uv add "insurance-credibility[deep]"     # with deep attention model
+```
+
+**Python**: 3.10, 3.11, 3.12.
+
+---
+
+## Quickstart
+
 ```python
 import polars as pl
 from insurance_credibility import BuhlmannStraub
 
+# One row per (scheme, underwriting year)
 df = pl.DataFrame({
     "scheme":    ["A", "A", "A", "B", "B", "B", "C", "C", "C"],
     "year":      [2022, 2023, 2024, 2022, 2023, 2024, 2022, 2023, 2024],
-    "loss_rate": [0.12, 0.09, 0.11, 0.25, 0.28, 0.22, 0.08, 0.07, 0.09],
-    "exposure":  [120.0, 135.0, 140.0, 45.0, 50.0, 48.0, 300.0, 310.0, 320.0],
+    "loss_rate": [0.65, 0.59, 0.61, 0.82, 0.78, 0.85, 0.48, 0.44, 0.46],
+    "exposure":  [2_200_000, 2_400_000, 2_100_000,   # £ earned premium
+                    380_000,   420_000,   405_000,
+                  6_100_000, 6_300_000, 6_400_000],
 })
 
 bs = BuhlmannStraub()
 bs.fit(df, group_col="scheme", period_col="year",
        loss_col="loss_rate", weight_col="exposure")
 
-print(bs.z_)         # credibility factors per scheme
 print(bs.k_)         # Bühlmann's k: noise-to-signal ratio
-print(bs.premiums_)  # credibility-blended premium per scheme
+print(bs.z_)         # credibility factors per scheme
+print(bs.premiums_)  # credibility-blended loss ratio per scheme
 ```
+
+```
+k = 1847432.3   (earned premium needed for Z = 0.5)
+
+shape: (3, 2)
+┌────────┬──────────┐
+│ group  ┆ Z        │
+│ ---    ┆ ---      │
+│ str    ┆ f64      │
+╞════════╪══════════╡
+│ A      ┆ 0.794    │
+│ B      ┆ 0.406    │
+│ C      ┆ 0.929    │
+└────────┴──────────┘
+```
+
+Scheme B gets only 41% weight on its own experience because its £1.2m total earned premium is below k. Scheme C at £18.8m earned premium gets 93% — the model almost entirely trusts its own history.
 
 ---
 
@@ -74,7 +101,17 @@ print(bs.premiums_)  # credibility-blended premium per scheme
 Z_i = w_i / (w_i + k)    where k = v/a
 ```
 
-Z approaches 1.0 as exposure grows — thick schemes are trusted almost entirely. Z shrinks toward 0 on thin schemes — the portfolio mean gets most of the weight. On a 30-scheme, 5-year benchmark with known true parameters:
+Z approaches 1.0 as exposure grows — thick schemes are trusted almost entirely. Z shrinks toward 0 on thin schemes — the portfolio mean gets most of the weight.
+
+**Practical interpretation of k**: a scheme needs earned premium equal to k to be 50% credible. You can read off the pricing committee's question — "how big does a scheme need to be before we take its experience seriously?" — directly from k:
+
+```python
+for target_z in [0.50, 0.75, 0.90]:
+    required = bs.k_ * target_z / (1.0 - target_z)
+    print(f"Z = {target_z:.0%}  →  required exposure = £{required:,.0f}")
+```
+
+On a 30-scheme, 5-year benchmark with known true parameters (mu=0.650, v=0.020, a=0.005, k=4.0):
 
 | Tier | Raw MAE | Portfolio avg MAE | Credibility MAE |
 |---|---|---|---|
@@ -84,7 +121,39 @@ Z approaches 1.0 as exposure grows — thick schemes are trusted almost entirely
 
 Credibility beats raw experience on thin and medium tiers. On thick tiers, Z approaches 1.0 and the two methods converge — which is correct behaviour.
 
-`HierarchicalBuhlmannStraub` extends this to nested group structures: scheme → book, sector → district → area. Following Jewell (1975).
+`HierarchicalBuhlmannStraub` extends this to nested group structures: scheme → book, sector → district → area. Following Jewell (1975). Thin schemes borrow from their book mean; thin books borrow from the portfolio grand mean.
+
+---
+
+## Exact Bayesian credibility: claim counts
+
+`PoissonGammaCredibility` is the exact Bayesian alternative when you have claim counts and exposures (rather than pre-computed loss ratios). The Poisson-Gamma conjugate pair gives a closed-form posterior — no MCMC, no approximation.
+
+```python
+from insurance_credibility import PoissonGammaCredibility
+
+df_counts = pl.DataFrame({
+    "scheme":   ["A", "A", "A", "B", "B", "B", "C", "C", "C"],
+    "year":     [2022, 2023, 2024] * 3,
+    "claims":   [132, 118, 125,   28, 35, 30,   310, 295, 320],
+    "exposure": [2200, 2400, 2100, 380, 420, 405, 6100, 6300, 6400],
+})
+
+model = PoissonGammaCredibility()
+model.fit(df_counts, group_col="scheme",
+          claims_col="claims", exposure_col="exposure")
+
+# Exact posterior 95% credibility intervals — no bootstrapping
+intervals = model.credibility_intervals(0.95)
+
+# Score a new scheme: 45 claims over 800 exposure
+result = model.predict(claims=45, exposure=800)
+print(result["credibility_rate"])  # posterior mean
+print(result["Z"])                 # credibility factor
+print(result["lower"], result["upper"])  # 95% interval
+```
+
+The `beta_` parameter is the "effective prior exposure" — equivalent to Bühlmann's k. A scheme needs exposure equal to `beta_` to reach Z = 0.5.
 
 ---
 
@@ -97,27 +166,172 @@ from insurance_credibility import ClaimsHistory, StaticCredibilityModel
 
 histories = [
     ClaimsHistory("POL001", periods=[1, 2, 3], claim_counts=[0, 1, 0],
-                  exposures=[1.0, 1.0, 0.8], prior_premium=400.0),
+                  exposures=[1.0, 1.0, 0.8], prior_premium=1_800.0),
     ClaimsHistory("POL002", periods=[1, 2, 3], claim_counts=[2, 1, 2],
-                  exposures=[1.0, 1.0, 1.0], prior_premium=400.0),
+                  exposures=[1.0, 1.0, 1.0], prior_premium=1_800.0),
 ]
 
 model = StaticCredibilityModel()
 model.fit(histories)
 
-cf = model.predict(histories[0])
+cf = model.predict(histories[0])    # credibility factor
 posterior_premium = histories[0].prior_premium * cf
 ```
 
 `exposures` is the key parameter that distinguishes this from flat NCD tables: a policy with 0.5 years of exposure gets far less credibility than one with 5 years, regardless of claim count.
 
+**Portfolio balance**: experience rating redistributes premium but should not inflate the total. Apply `balance_calibrate` to enforce this:
+
+```python
+from insurance_credibility import balance_calibrate
+
+cal = balance_calibrate(model.predict, histories)
+print(f"Relative bias before calibration: {cal.relative_bias:+.2%}")
+print(f"Calibration factor: {cal.calibration_factor:.4f}")
+```
+
+---
+
+## UK motor example: comparing manual calculation to model output
+
+One of the most useful audit steps is verifying that the model matches the formula. For scheme `SCH-007` with £420k total earned premium, a 72% observed loss ratio, and a fitted k of £1.85m:
+
+```python
+# Manual
+w    = 420_000        # total earned premium
+k    = bs.k_          # 1_847_432
+x_bar = 0.72          # observed mean loss ratio
+mu   = bs.mu_hat_     # collective mean
+
+Z     = w / (w + k)   # 420k / (420k + 1847k) = 0.185
+P     = Z * x_bar + (1 - Z) * mu
+
+print(f"Z = {Z:.4f}")   # 0.1853
+print(f"P = {P:.4f}")   # 0.6574
+
+# Verify against model
+row = bs.premiums_.filter(pl.col("group") == "SCH-007")
+assert abs(row["credibility_premium"][0] - P) < 1e-4
+```
+
+The formula is closed-form and auditable. No black box.
+
+---
+
+## API reference
+
+### Classical credibility
+
+**`BuhlmannStraub`**
+
+```python
+bs = BuhlmannStraub(truncate_a=True)
+bs.fit(data, group_col, period_col, loss_col, weight_col)
+
+bs.mu_hat_   # float — collective mean loss rate
+bs.v_hat_    # float — EPV (within-group variance)
+bs.a_hat_    # float — VHM (between-group variance)
+bs.k_        # float — Bühlmann's k = v/a
+bs.z_        # pl.DataFrame["group", "Z"]
+bs.premiums_ # pl.DataFrame["group", "exposure", "observed_mean",
+             #              "Z", "credibility_premium", "complement"]
+bs.summary() # prints structural params, returns premiums_ table
+```
+
+**`HierarchicalBuhlmannStraub`**
+
+```python
+model = HierarchicalBuhlmannStraub(level_cols=["book", "scheme"])
+model.fit(data, period_col, loss_col, weight_col)
+
+model.premiums_at("scheme")   # credibility premiums at scheme level
+model.premiums_at("book")     # credibility premiums at book level
+model.level_results_["book"]  # LevelResult: mu, v, a, k, z, premiums
+model.summary()               # structural parameters at each level
+```
+
+**`PoissonGammaCredibility`**
+
+```python
+model = PoissonGammaCredibility(prior_alpha=None, prior_beta=None)
+model.fit(data, group_col, claims_col, exposure_col)
+
+model.alpha_        # float — fitted Gamma prior shape
+model.beta_         # float — fitted Gamma prior rate (≡ Bühlmann k)
+model.prior_mean_   # float — alpha / beta
+model.premiums_     # pl.DataFrame with posterior estimates per group
+model.credibility_intervals(0.95)   # exact posterior intervals
+model.predict(claims, exposure)     # dict: rate, Z, lower, upper for new group
+```
+
+### Experience rating
+
+**`ClaimsHistory`**
+
+```python
+h = ClaimsHistory(
+    policy_id="POL001",
+    periods=[1, 2, 3],
+    claim_counts=[0, 1, 0],
+    exposures=[1.0, 1.0, 0.8],   # years at risk per period
+    prior_premium=1_800.0,        # GLM base rate
+)
+h.total_exposure   # 2.8
+h.total_claims     # 1
+h.claim_frequency  # 1 / 2.8 = 0.357
+```
+
+**`StaticCredibilityModel`**
+
+```python
+model = StaticCredibilityModel(kappa=None, min_kappa=0.1, max_kappa=1000.0)
+model.fit(histories)
+
+model.kappa_            # float — fitted kappa = sigma²/tau²
+model.portfolio_mean_   # float — grand mean frequency
+model.predict(history)              # float — credibility factor CF
+model.predict_batch(histories)      # pl.DataFrame
+model.credibility_weight(history)   # float — omega = t/(t+kappa)
+```
+
+**`DynamicPoissonGammaModel`**
+
+```python
+model = DynamicPoissonGammaModel(p0=0.5, q0=0.8)
+model.fit(histories)
+
+model.p_   # float — state reversion parameter
+model.q_   # float — recency decay parameter
+model.predict(history)              # float — credibility factor
+model.predict_batch(histories)      # pl.DataFrame (includes posterior params)
+model.predict_posterior_params(h)   # (alpha, beta) for uncertainty quantification
+```
+
+**Balance calibration**
+
+```python
+from insurance_credibility import balance_calibrate, apply_calibration
+
+cal = balance_calibrate(model.predict, histories)
+cal.calibration_factor   # multiplicative correction
+cal.relative_bias        # (predicted - actual) / actual
+
+posterior = apply_calibration(histories, model.predict, cal.calibration_factor)
+```
+
 ---
 
 ## Model tiers
 
-**`StaticCredibilityModel`** — Bühlmann-Straub at individual policy level. Fits kappa = sigma^2 / tau^2 from a portfolio of policy histories. Credibility weight for a policy is `omega = e_total / (e_total + kappa)`. Closed-form, fast, suitable for production.
+**`BuhlmannStraub`** — the standard for scheme and territory experience rating. Non-parametric: estimates v and a from the portfolio via method of moments. Closed-form, fits in milliseconds. The right default for most UK motor and home portfolios.
 
-**`DynamicPoissonGammaModel`** — Poisson-gamma state-space model following Ahn, Jeong, Lu & Wüthrich (2023). Seniority-weighted updates: recent years count more. Produces the full posterior distribution per policy, not just a point estimate — useful when communicating uncertainty to a pricing committee or reinsurer.
+**`PoissonGammaCredibility`** — exact Bayesian credibility for claim count data. Same closed-form speed as Bühlmann-Straub, but with full posterior distributions and exact credibility intervals. Use this when you have claims and exposure separately (not pre-computed ratios) and when exact intervals matter for governance sign-off.
+
+**`HierarchicalBuhlmannStraub`** — nested group structures. Scheme → book, postcode sector → district → area. Following Jewell (1975). Each level borrows strength from the level above.
+
+**`StaticCredibilityModel`** — Bühlmann-Straub at individual policy level. Fits kappa = sigma² / tau² from a portfolio of policy histories. For commercial motor, fleet, and large account renewal pricing. Closed-form, fast, suitable for batch scoring.
+
+**`DynamicPoissonGammaModel`** — Poisson-gamma state-space model following Ahn, Jeong, Lu & Wüthrich (2023). Seniority-weighted: recent years count more than old years. Produces the full posterior distribution per policy — useful when communicating uncertainty to a pricing committee or reinsurer. Requires numerical optimisation; run on Databricks for large portfolios.
 
 **`SurrogateModel`** — IS-surrogate (Calcetero et al. 2024). For large portfolios where computing the exact posterior for every policy is expensive.
 
@@ -141,9 +355,24 @@ The actuarial credibility approach and the random effects GLM (e.g. `statsmodels
 
 - Bühlmann-Straub is closed-form and fits in under a second on a 150-row scheme panel. No iteration, no convergence issues.
 - Random effects GLM requires a correctly specified likelihood and converges slowly on unbalanced panels with many groups.
-- Bühlmann-Straub exposes the structural parameters (mu, v, a, k) directly, making them easy to inspect and challenge.
+- Bühlmann-Straub exposes the structural parameters (mu, v, a, k) directly, making them easy to inspect and challenge in peer review or regulatory sign-off.
 
 For Poisson-Gamma likelihoods and non-Gaussian random effects, use `DynamicPoissonGammaModel`.
+
+---
+
+## Compared to alternatives
+
+| | Manual credibility weights | Random effects GLM | Hierarchical Bayes | **insurance-credibility** |
+|---|---|---|---|---|
+| Statistically optimal blend | No (rule-of-thumb) | Yes | Yes | Yes (B-S formula) |
+| No prior specification needed | Yes | Yes | No | Yes |
+| Handles unequal exposures | Manual | Yes | Yes | Yes |
+| Nested group hierarchies | Manual | Partial | Yes | Yes (`HierarchicalBuhlmannStraub`) |
+| Individual policy experience rating | No | No | Partial | Yes |
+| Closed-form, < 1 second | Yes (simple) | No | No | Yes |
+| Full posterior distribution | No | No | Yes | Yes (`DynamicPoissonGammaModel`) |
+| Exact posterior intervals | No | No | Yes | Yes (`PoissonGammaCredibility`) |
 
 ---
 
@@ -153,6 +382,30 @@ For Poisson-Gamma likelihoods and non-Gaussian random effects, use `DynamicPoiss
 - `StaticCredibilityModel` assumes homoscedastic within-policy variance. Segment by policy size tier on portfolios with large fleets alongside small ones.
 - Kappa estimation needs at least 50–100 policies with 2+ years of history. Below this, the estimate is unreliable.
 - Structural parameters must be refitted as portfolio composition changes. Stale kappa from a different historical book produces miscalibrated experience adjustments.
+
+---
+
+## Examples
+
+The `examples/` directory contains runnable scripts:
+
+- `examples/scheme_experience_rating.py` — Bühlmann-Straub for a 25-scheme motor portfolio. Shows structural parameters, per-scheme results, manual calculation cross-check, accuracy comparison by tier, and credibility thresholds.
+- `examples/policy_experience_rating.py` — `StaticCredibilityModel` and `DynamicPoissonGammaModel` for 200 fleet policies. Shows why exposure matters, manual cross-check, balance calibration.
+
+Run locally (no Databricks required):
+
+```bash
+git clone https://github.com/burning-cost/insurance-credibility
+cd insurance-credibility
+uv run python examples/scheme_experience_rating.py
+uv run python examples/policy_experience_rating.py
+```
+
+Databricks notebooks in `notebooks/`:
+
+- `notebooks/buhlmann_straub_demo.py` — full UK motor scheme workflow: fit, interpret, audit, hierarchical model, policy experience rating
+- `notebooks/poisson_gamma_credibility_demo.py` — exact Bayesian credibility for claim counts with posterior intervals
+- `notebooks/fremtpl2_credibility.py` — validation on French motor MTPL open data (22 regions)
 
 ---
 
@@ -172,10 +425,11 @@ Takes segment-level experience data: earned exposure, observed loss ratios, sche
 
 ## References
 
+- Bühlmann, H. & Straub, E. (1970). Glaubwürdigkeit für Schadensätze. *Mitteilungen VSVM*, 70, 111–133.
 - Bühlmann, H. & Gisler, A. (2005). *A Course in Credibility Theory and Its Applications*. Springer.
-- Jewell, W.S. (1975). "Multidimensional Credibility." *Operations Research*, 23(5), 904–920.
-- Ahn, J.Y., Jeong, H., Lu, Y. & Wüthrich, M.V. (2023). "Dynamic Bayesian Credibility." arXiv:2308.16058.
-- Calcetero, V., Badescu, A. & Lin, X.S. (2024). "Credibility theory for the 21st century." *ASTIN Bulletin*.
+- Jewell, W.S. (1975). Multidimensional Credibility. *Operations Research*, 23(5), 904–920.
+- Ahn, J.Y., Jeong, H., Lu, Y. & Wüthrich, M.V. (2023). Dynamic Bayesian Credibility. arXiv:2308.16058.
+- Calcetero, V., Badescu, A. & Lin, X.S. (2024). Credibility theory for the 21st century. *ASTIN Bulletin*.
 
 ---
 

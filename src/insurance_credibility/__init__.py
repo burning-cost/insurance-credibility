@@ -9,6 +9,12 @@ classical
     Also includes PoissonGammaCredibility: the exact Bayesian credibility model
     for claim count data (closed-form, no MCMC).
 
+    BMSEquilibriumSimulator: game-theoretic NCD underreporting analysis based
+    on Liang et al. (arXiv:2601.12655) and Lemaire (1977). Computes Nash
+    equilibrium reporting thresholds, corrects observed frequencies for the
+    hunger-for-bonus bias, and quantifies the cross-subsidy from lower-NCD
+    to higher-NCD policyholders.
+
 experience
     Individual policy-level Bayesian experience rating. Four model tiers:
     static Bühlmann-Straub, dynamic Poisson-gamma state-space, IS-surrogate,
@@ -28,6 +34,17 @@ Quick start::
     model.fit(df, group_col="scheme", claims_col="claims", exposure_col="exposure")
     model.credibility_intervals(0.95)  # exact posterior intervals
 
+    # NCD underreporting / hunger-for-bonus equilibrium
+    from scipy import stats
+    from insurance_credibility import BMSEquilibriumSimulator
+    sim = BMSEquilibriumSimulator(
+        discounts=[0.0, 0.30, 0.35, 0.40, 0.50, 0.60, 0.65, 0.65, 0.70, 0.70],
+        base_premium=1000.0,
+        severity_dist=stats.gamma(a=1.2, scale=1/0.0085),
+    )
+    sim.fit(observed_freq=[0.08, 0.07, 0.06, 0.055, 0.05, 0.045, 0.04, 0.04, 0.035, 0.03])
+    sim.summary()
+
     # Individual policy experience rating
     from insurance_credibility import ClaimsHistory, StaticCredibilityModel
     model = StaticCredibilityModel()
@@ -37,6 +54,7 @@ Quick start::
 
 # Classical credibility
 from .classical import (
+    BMSEquilibriumSimulator,
     BuhlmannStraub,
     HierarchicalBuhlmannStraub,
     LevelResult,
@@ -79,6 +97,7 @@ except PackageNotFoundError:
 
 __all__ = [
     # Classical
+    "BMSEquilibriumSimulator",
     "BuhlmannStraub",
     "HierarchicalBuhlmannStraub",
     "LevelResult",

@@ -214,8 +214,11 @@ class DynamicPoissonGammaModel:
             If fit() has not been called.
         """
         self._check_fitted()
-        assert self.p_ is not None
-        assert self.q_ is not None
+        if self.p_ is None or self.q_ is None:
+            raise RuntimeError(
+                "DynamicPoissonGammaModel is fitted but p_ or q_ is None. "
+                "This should not happen — please report as a bug."
+            )
 
         alpha_t, beta_t = self._forward_recursion(
             history, self.p_, self.q_
@@ -248,8 +251,11 @@ class DynamicPoissonGammaModel:
             (alpha_{t+1}, beta_{t+1}) — shape and rate of posterior Gamma.
         """
         self._check_fitted()
-        assert self.p_ is not None
-        assert self.q_ is not None
+        if self.p_ is None or self.q_ is None:
+            raise RuntimeError(
+                "DynamicPoissonGammaModel is fitted but p_ or q_ is None. "
+                "This should not happen — please report as a bug."
+            )
         return self._forward_recursion(history, self.p_, self.q_)
 
     def predict_batch(self, histories: list[ClaimsHistory]) -> pl.DataFrame:
@@ -315,7 +321,11 @@ class DynamicPoissonGammaModel:
         tuple[float, float]
             (alpha_{T+1}, beta_{T+1}) — the one-step-ahead posterior state.
         """
-        assert history.exposures is not None
+        if history.exposures is None:
+            raise ValueError(
+                f"Policy '{history.policy_id}' has exposures=None. "
+                "DynamicPoissonGammaModel requires exposure data for every period."
+            )
         mu = history.prior_premium
 
         # Initialise prior: Theta ~ Gamma(alpha0, beta0) with E[Theta]=1
@@ -353,7 +363,11 @@ class DynamicPoissonGammaModel:
         Summing these marginal log-likelihoods over all periods gives the
         complete-data log-likelihood tractable via the forward recursion.
         """
-        assert history.exposures is not None
+        if history.exposures is None:
+            raise ValueError(
+                f"Policy '{history.policy_id}' has exposures=None. "
+                "DynamicPoissonGammaModel requires exposure data for every period."
+            )
         mu = history.prior_premium
 
         alpha = self.alpha0

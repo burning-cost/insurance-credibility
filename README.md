@@ -2,7 +2,7 @@
 
 **Bühlmann-Straub credibility and Bayesian experience rating for UK insurance pricing teams.**
 
-[![PyPI](https://img.shields.io/pypi/v/insurance-credibility)](https://pypi.org/project/insurance-credibility/) [![Python](https://img.shields.io/pypi/pyversions/insurance-credibility)](https://pypi.org/project/insurance-credibility/) [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/burning-cost/insurance-credibility/blob/main/LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/insurance-credibility)](https://pypi.org/project/insurance-credibility/) [![Downloads](https://img.shields.io/pypi/dm/insurance-credibility)](https://pypi.org/project/insurance-credibility/) [![Python](https://img.shields.io/pypi/pyversions/insurance-credibility)](https://pypi.org/project/insurance-credibility/) [![License](https://img.shields.io/pypi/l/insurance-credibility)](https://pypi.org/project/insurance-credibility/)
 
 ---
 
@@ -443,3 +443,11 @@ Takes segment-level experience data: earned exposure, observed loss ratios, sche
 ## Licence
 
 MIT
+
+## Related Libraries
+
+| Library | Description |
+|---------|-------------|
+| [`insurance-frequency-severity`](https://github.com/burning-cost/insurance-frequency-severity) | Sarmanov copula frequency-severity — apply credibility to the joint premium, not just marginals |
+| [`insurance-cv`](https://github.com/burning-cost/insurance-cv) | Walk-forward cross-validation — evaluate credibility estimators on held-out scheme years |
+| [`insurance-monitoring`](https://github.com/burning-cost/insurance-monitoring) | Post-deployment monitoring — track whether credibility-adjusted experience rates drift over time |

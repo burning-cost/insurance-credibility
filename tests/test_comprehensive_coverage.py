@@ -374,7 +374,7 @@ class TestStaticCredibilityModelAdditional:
         """All single-period histories: v cannot be estimated, fallback to grand_mean."""
         rng = np.random.default_rng(99)
         histories = [
-            _make_history(f"P{i}", [rng.poisson(1).tolist()], prior=1.0)
+            _make_history(f"P{i}", [int(rng.poisson(1))], prior=1.0)
             for i in range(10)
         ]
         model = StaticCredibilityModel()
